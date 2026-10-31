@@ -212,5 +212,24 @@ describe('AI Module - enrichPlanWithAi Offline & Resiliency', () => {
       summary: 'default',
       aiIdeas: []
     });
+
+    // Test dropping short ideas (<= 5 chars)
+    const sanitized = validateAndSanitizeAiOutput({
+      summary: 'Valid summary',
+      aiIdeas: ['no', 'bad', 'Valid long suggestion idea']
+    }, 'default');
+    assert.equal(sanitized.aiIdeas.length, 1);
+    assert.equal(sanitized.aiIdeas[0], 'Valid long suggestion idea');
+  });
+
+  it('retains deterministic plan without crash on generic network error', async () => {
+    const mockFetch = async () => {
+      const err = new Error('Generic socket disconnection');
+      throw err;
+    };
+
+    const result = await enrichPlanWithAi(basePlan, 'test-key-123', { fetch: mockFetch });
+    assert.equal(result.aiEnriched, false);
+    assert.ok(result.aiNotice.includes('network error'));
   });
 });

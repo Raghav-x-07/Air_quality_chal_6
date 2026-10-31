@@ -276,6 +276,31 @@ describe('Planner Module - generateDeterministicIdeas Cultural Personalization',
 
     assert.ok(ideas.some((i) => i.toLowerCase().includes('eco') || i.toLowerCase().includes('seed')));
     assert.ok(ideas.some((i) => i.toLowerCase().includes('dance') || i.toLowerCase().includes('flash mob')));
+    assert.ok(ideas.some((i) => i.toLowerCase().includes('pune') || i.toLowerCase().includes('modak')));
+  });
+
+  it('covers photo/reels preference, large scale (>500 guests), non-veg and mixed diets', () => {
+    const ideasLarge = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.COMMUNITY,
+      guestCount: 650,
+      city: 'Pune',
+      diet: DIET_TYPES.MIXED,
+      preferences: '360 video reels for instagram'
+    });
+    assert.ok(ideasLarge.some((i) => i.toLowerCase().includes('golf cart') || i.toLowerCase().includes('buggy')));
+    assert.ok(ideasLarge.some((i) => i.toLowerCase().includes('360-degree') || i.toLowerCase().includes('reels')));
+    assert.ok(ideasLarge.some((i) => i.toLowerCase().includes('partitioned') || i.toLowerCase().includes('green and red')));
+    assert.ok(ideasLarge.some((i) => i.toLowerCase().includes('volunteer')));
+
+    const ideasNonVeg = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.BIRTHDAY,
+      guestCount: 50,
+      city: 'Delhi',
+      diet: DIET_TYPES.NON_VEG,
+      preferences: ''
+    });
+    assert.ok(ideasNonVeg.some((i) => i.toLowerCase().includes('sigree') || i.toLowerCase().includes('kebabs')));
+    assert.ok(ideasNonVeg.some((i) => i.toLowerCase().includes('time capsule') || i.toLowerCase().includes('cupcake')));
   });
 
   it('handles null, undefined, and non-object inputs safely across planner helpers', () => {

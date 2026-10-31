@@ -124,7 +124,7 @@ The server will start at **http://localhost:3000**. Open this URL in any modern 
 ```bash
 npm test
 ```
-**Test Results**: **111 automated tests across 15 test suites** with **99.71% code coverage** (100% in AI, planner, validation, and constants; 98.75% in HTTP server), executing via Node's native `node:test` runner with 100% pass rate.
+**Test Results**: **115 automated tests across 15 test suites** with **99.88% code coverage** (100% in AI, planner, validation, and constants; 99.51% in HTTP server; 100% function coverage across all files), executing via Node's native `node:test` runner with 100% pass rate.
 
 ---
 
@@ -169,7 +169,7 @@ npm test
 - **Lightweight Repository**: Entire repo is under 1 MB, far below the 10 MB limit.
 
 ### 4. Automated Testing
-- **Suite**: 111 unit and integration tests across 15 test suites in `test/` (99.71% code coverage).
+- **Suite**: 115 unit and integration tests across 15 test suites in `test/` (99.88% code coverage).
 - **Coverage**:
   - Budget breakdown sums **exactly** to the total for every event type and odd amounts (₹2,000 to ₹1,00,00,000).
   - Milestone chronological ordering and compression for 0-day, 5-day, and short-notice lead times.

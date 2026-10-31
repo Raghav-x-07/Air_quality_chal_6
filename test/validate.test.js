@@ -155,4 +155,13 @@ describe('Validation Module - validatePlanningInput', () => {
     assert.equal(res.valid, false);
     assert.ok(res.errors.some((e) => e.includes('eventDate')));
   });
+
+  it('rejects extreme boundary inputs (boolean/infinite budget, excessive guests and city)', () => {
+    assert.equal(validatePlanningInput({ ...validPayload, totalBudget: true }, refDate).valid, false);
+    assert.equal(validatePlanningInput({ ...validPayload, totalBudget: Infinity }, refDate).valid, false);
+    assert.equal(validatePlanningInput({ ...validPayload, totalBudget: 600000000 }, refDate).valid, false);
+    assert.equal(validatePlanningInput({ ...validPayload, guestCount: 15000 }, refDate).valid, false);
+    assert.equal(validatePlanningInput({ ...validPayload, guestCount: 25.5 }, refDate).valid, false);
+    assert.equal(validatePlanningInput({ ...validPayload, city: 'C'.repeat(85) }, refDate).valid, false);
+  });
 });

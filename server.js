@@ -391,10 +391,18 @@ export default function handler(req, res) {
   defaultAppServer.emit('request', req, res);
 }
 
+/**
+ * Starts the application server on the specified port.
+ * @param {number|string} [port]
+ * @returns {http.Server}
+ */
+export function startServer(port = process.env.PORT || 3000) {
+  return defaultAppServer.listen(port, () => {
+    console.log(`Utsav Celebration Planner server running at http://localhost:${port}`);
+  });
+}
+
 // Start server if directly executed
 if (process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url)) {
-  const PORT = process.env.PORT || 3000;
-  defaultAppServer.listen(PORT, () => {
-    console.log(`Utsav Celebration Planner server running at http://localhost:${PORT}`);
-  });
+  startServer();
 }

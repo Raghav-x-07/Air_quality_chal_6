@@ -610,6 +610,14 @@
     btnPrint.addEventListener('click', handlePrint);
     btnDownloadJson.addEventListener('click', handleDownloadJson);
 
+    // Dismiss error banner with Escape key for keyboard accessibility (WCAG 2.1.1)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !errorBanner.hidden) {
+        clearErrors();
+        submitBtn.focus();
+      }
+    });
+
     // Preset button triggers
     presetWedding.addEventListener('click', () => {
       applyPreset({

@@ -353,4 +353,12 @@ describe('Server Module - Endpoints & Security Integration', () => {
     };
     handler(mockReq, mockRes);
   });
+
+  it('tests startServer helper function and cleanly closes it', async () => {
+    const { startServer } = await import('../server.js');
+    assert.equal(typeof startServer, 'function');
+    const instance = startServer(0);
+    await new Promise((resolve) => instance.once('listening', resolve));
+    await new Promise((resolve) => instance.close(resolve));
+  });
 });
