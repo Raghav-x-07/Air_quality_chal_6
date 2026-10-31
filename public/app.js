@@ -43,6 +43,7 @@
   const vendorChecklist = document.getElementById('vendor-checklist');
   const vendorProgressLabel = document.getElementById('vendor-progress-label');
   const vendorProgressFill = document.getElementById('vendor-progress-fill');
+  const vendorProgressBar = document.getElementById('vendor-progressbar');
 
   const ideasList = document.getElementById('ideas-list');
 
@@ -270,6 +271,9 @@
     const percent = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
     vendorProgressLabel.textContent = `${checkedCount} of ${total} Confirmed (${formatINR(bookedBudget)})`;
     vendorProgressFill.style.width = `${percent}%`;
+    if (vendorProgressBar) {
+      vendorProgressBar.setAttribute('aria-valuenow', String(percent));
+    }
   }
 
   /**
@@ -291,7 +295,7 @@
       checkbox.id = `chk-${vendor.id}`;
       checkbox.className = 'vendor-checkbox';
       checkbox.checked = Boolean(vendorCheckedStates.get(vendor.id));
-      checkbox.setAttribute('aria-label', `Mark ${vendor.name} as booked`);
+      // Visible label provides accessible name conforming to WCAG 2.5.3 (Label in Name)
 
       if (checkbox.checked) {
         card.classList.add('vendor-checked');
@@ -449,8 +453,11 @@
     // Announce to Screen Readers
     planLiveStatus.textContent = `Plan successfully generated for ${plan.input.eventType} in ${plan.input.city} with ${plan.input.guestCount} guests.`;
 
-    // Scroll smoothly to output
-    document.getElementById('output-section').scrollIntoView({ behavior: 'smooth' });
+    // Respect user motion preference (WCAG 2.3.3)
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('output-section').scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth'
+    });
   }
 
   /**
@@ -483,7 +490,8 @@
     if (!payload.eventDate) {
       clientErrors.push('Please choose a celebration date.');
     } else {
-      const todayStr = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       if (payload.eventDate < todayStr) {
         clientErrors.push('Celebration date cannot be in the past.');
       }
@@ -569,13 +577,16 @@
    */
   function initializeTheme() {
     const savedTheme = localStorage.getItem('utsav-theme');
+    let isDark = false;
     if (savedTheme) {
       document.documentElement.setAttribute('data-theme', savedTheme);
       themeLabel.textContent = savedTheme === 'dark' ? 'Dark' : 'Light';
+      isDark = savedTheme === 'dark';
     } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      themeLabel.textContent = prefersDark ? 'Dark' : 'Light';
+      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      themeLabel.textContent = isDark ? 'Dark' : 'Light';
     }
+    themeToggleBtn.setAttribute('aria-pressed', String(isDark));
 
     themeToggleBtn.addEventListener('click', () => {
       const current = document.documentElement.getAttribute('data-theme');
@@ -585,6 +596,7 @@
       document.documentElement.setAttribute('data-theme', nextTheme);
       localStorage.setItem('utsav-theme', nextTheme);
       themeLabel.textContent = nextTheme === 'dark' ? 'Dark' : 'Light';
+      themeToggleBtn.setAttribute('aria-pressed', String(nextTheme === 'dark'));
     });
   }
 

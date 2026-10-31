@@ -14,3 +14,10 @@ Thumbs.db
 *.log
 coverage/
 .system_generated/
+
+# Media & walkthrough recordings
+*.mp4
+*.webm
+video_poster.png
+record_video.py
+

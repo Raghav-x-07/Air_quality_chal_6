@@ -167,6 +167,17 @@ describe('Planner Module - generateWarnings Contextual Rules', () => {
 
     assert.ok(warnings.some((w) => w.id === 'warn-mixed-diet'));
   });
+  it('triggers immediate action alert when available days < 7', () => {
+    const warnings = generateWarnings({
+      eventType: EVENT_TYPES.WEDDING,
+      guestCount: 100,
+      totalBudget: 500000,
+      venueType: VENUE_TYPES.INDOOR,
+      diet: DIET_TYPES.VEG
+    }, 4);
+
+    assert.ok(warnings.some((w) => w.id === 'warn-urgent-notice'));
+  });
 });
 
 describe('Planner Module - generateDeterministicIdeas Cultural Personalization', () => {
@@ -194,6 +205,66 @@ describe('Planner Module - generateDeterministicIdeas Cultural Personalization',
     assert.ok(ideas.some((i) => i.toLowerCase().includes('rajputana') || i.toLowerCase().includes('rajasthani')));
   });
 
+  it('covers Mumbai, Bengaluru, Chennai, Kolkata, Hyderabad, and generic cities', () => {
+    const mumbaiIdeas = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.WEDDING,
+      guestCount: 150,
+      city: 'Mumbai',
+      diet: DIET_TYPES.NON_VEG,
+      preferences: 'instagram reels photoshoot'
+    });
+    assert.ok(mumbaiIdeas.some((i) => i.toLowerCase().includes('mumbai') || i.toLowerCase().includes('bollywood')));
+    assert.ok(mumbaiIdeas.some((i) => i.toLowerCase().includes('tandoor') || i.toLowerCase().includes('kebab')));
+    assert.ok(mumbaiIdeas.some((i) => i.toLowerCase().includes('booth') || i.toLowerCase().includes('video')));
+
+    const blrIdeas = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.COMMUNITY,
+      guestCount: 600,
+      city: 'Bengaluru',
+      diet: DIET_TYPES.MIXED,
+      preferences: ''
+    });
+    assert.ok(blrIdeas.some((i) => i.toLowerCase().includes('bengaluru') || i.toLowerCase().includes('coffee')));
+    assert.ok(blrIdeas.some((i) => i.toLowerCase().includes('buggy') || i.toLowerCase().includes('golf cart')));
+
+    const chennaiIdeas = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.WEDDING,
+      guestCount: 30,
+      city: 'Chennai',
+      diet: DIET_TYPES.VEG,
+      preferences: ''
+    });
+    assert.ok(chennaiIdeas.some((i) => i.toLowerCase().includes('carnatic') || i.toLowerCase().includes('elai sappadu')));
+    assert.ok(chennaiIdeas.some((i) => i.toLowerCase().includes('handwritten note')));
+
+    const kolkataIdeas = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.COMMUNITY,
+      guestCount: 100,
+      city: 'Kolkata',
+      diet: DIET_TYPES.VEG,
+      preferences: ''
+    });
+    assert.ok(kolkataIdeas.some((i) => i.toLowerCase().includes('kolkata') || i.toLowerCase().includes('mishti')));
+
+    const hydIdeas = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.BIRTHDAY,
+      guestCount: 80,
+      city: 'Hyderabad',
+      diet: DIET_TYPES.NON_VEG,
+      preferences: ''
+    });
+    assert.ok(hydIdeas.some((i) => i.toLowerCase().includes('biryani') || i.toLowerCase().includes('nizami')));
+
+    const panIndianIdeas = generateDeterministicIdeas({
+      eventType: EVENT_TYPES.WEDDING,
+      guestCount: 100,
+      city: 'Bhopal',
+      diet: DIET_TYPES.VEG,
+      preferences: ''
+    });
+    assert.ok(panIndianIdeas.some((i) => i.toLowerCase().includes('bhopal')));
+  });
+
   it('matches keyword preferences for sustainability and dancing', () => {
     const ideas = generateDeterministicIdeas({
       eventType: EVENT_TYPES.BIRTHDAY,
@@ -205,6 +276,41 @@ describe('Planner Module - generateDeterministicIdeas Cultural Personalization',
 
     assert.ok(ideas.some((i) => i.toLowerCase().includes('eco') || i.toLowerCase().includes('seed')));
     assert.ok(ideas.some((i) => i.toLowerCase().includes('dance') || i.toLowerCase().includes('flash mob')));
+  });
+
+  it('handles null, undefined, and non-object inputs safely across planner helpers', () => {
+    assert.deepEqual(generateWarnings(null), []);
+    assert.deepEqual(generateDeterministicIdeas(null), []);
+    assert.ok(generateVendorChecklist(EVENT_TYPES.WEDDING, VENUE_TYPES.INDOOR, null).length > 0);
+  });
+});
+
+describe('Planner Module - Helper Functions & Edge Cases', () => {
+  it('handles non-numeric budget gracefully in calculateBudgetBreakdown', () => {
+    const resNaN = calculateBudgetBreakdown(EVENT_TYPES.WEDDING, VENUE_TYPES.INDOOR, NaN);
+    assert.equal(resNaN.totalBudget, 0);
+    assert.equal(resNaN.checkSum, 0);
+
+    const resString = calculateBudgetBreakdown(EVENT_TYPES.WEDDING, VENUE_TYPES.INDOOR, 'invalid');
+    assert.equal(resString.totalBudget, 0);
+    assert.equal(resString.checkSum, 0);
+  });
+
+  it('handles invalid dates safely in calculateDaysBetween and formatDate', async () => {
+    const { calculateDaysBetween, formatDate } = await import('../src/planner.js');
+    assert.equal(calculateDaysBetween('not-a-date', new Date()), 0);
+    assert.equal(calculateDaysBetween(new Date(), new Date('invalid')), 0);
+    assert.equal(formatDate('not-a-date'), '');
+    assert.equal(formatDate(new Date('invalid')), '');
+  });
+
+  it('clamps milestone dates to referenceDate start when target date is past', () => {
+    const refDate = new Date(2026, 9, 23);
+    const res = generateTimeline(EVENT_TYPES.WEDDING, '2026-10-20', refDate);
+    assert.equal(res.availableDays, 0);
+    for (const m of res.milestones) {
+      assert.equal(m.targetDate, '2026-10-23');
+    }
   });
 });
 

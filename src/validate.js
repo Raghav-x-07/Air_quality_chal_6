@@ -51,6 +51,7 @@ export function isValidDateFormat(dateStr) {
  * @returns {boolean} True if date is not in the past.
  */
 export function isFutureOrToday(dateStr, referenceDate = new Date()) {
+  if (!isValidDateFormat(dateStr)) return false;
   const [year, month, day] = dateStr.split('-').map(Number);
   const targetDate = new Date(year, month - 1, day);
 
@@ -176,7 +177,7 @@ export function validatePlanningInput(payload, referenceDate = new Date()) {
   return {
     valid: true,
     errors: [],
-    sanitized: {
+    sanitized: Object.freeze({
       eventType,
       guestCount: guestsNum,
       totalBudget: Math.round(budgetNum),
@@ -185,6 +186,6 @@ export function validatePlanningInput(payload, referenceDate = new Date()) {
       venueType,
       diet,
       preferences: sanitizedPreferences
-    }
+    })
   };
 }

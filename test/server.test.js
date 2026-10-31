@@ -222,4 +222,135 @@ describe('Server Module - Endpoints & Security Integration', () => {
     const res = await fetch(`${baseUrl}/non-existent-page-xyz`);
     assert.equal(res.status, 404);
   });
+
+  it('responds with 405 Method Not Allowed on non-GET for /api/health', async () => {
+    const resPost = await fetch(`${baseUrl}/api/health`, { method: 'POST' });
+    assert.equal(resPost.status, 405);
+    assert.equal(resPost.headers.get('allow'), 'GET');
+  });
+
+  it('responds with 405 Method Not Allowed on non-GET for static assets', async () => {
+    const resPost = await fetch(`${baseUrl}/styles.css`, { method: 'POST' });
+    assert.equal(resPost.status, 405);
+    assert.equal(resPost.headers.get('allow'), 'GET');
+  });
+
+  it('blocks direct path traversal in serveStaticFile and returns 403', async () => {
+    const { serveStaticFile } = await import('../server.js');
+    let statusCode = 0;
+    let endPayload = '';
+    const mockRes = {
+      setHeader: () => {},
+      writeHead: (code) => { statusCode = code; },
+      end: (data) => { endPayload = data; }
+    };
+    serveStaticFile('/../../etc/passwd', mockRes);
+    assert.equal(statusCode, 403);
+    assert.ok(endPayload.includes('Access forbidden'));
+  });
+
+  it('tests RateLimiter cleanup and reset', async () => {
+    const { RateLimiter } = await import('../server.js');
+    const limiter = new RateLimiter(50, 2);
+    assert.equal(limiter.isRateLimited('1.2.3.4'), false);
+    assert.equal(limiter.isRateLimited('1.2.3.4'), false);
+    assert.equal(limiter.isRateLimited('1.2.3.4'), true);
+
+    limiter.reset();
+    assert.equal(limiter.isRateLimited('1.2.3.4'), false);
+
+    // Test cleanup with mixed expired and active timestamps
+    limiter.requests.set('5.6.7.8', [Date.now() - 100000, Date.now()]);
+    limiter.cleanup();
+    assert.equal(limiter.requests.get('5.6.7.8')?.length, 1);
+
+    // Test opportunistic cleanup trigger when map exceeds 1000 entries
+    for (let i = 0; i < 1005; i++) {
+      limiter.requests.set(`10.0.0.${i}`, [Date.now() - 100000]);
+    }
+    assert.ok(limiter.requests.size > 1000);
+    limiter.isRateLimited('192.168.1.1');
+    assert.ok(limiter.requests.size < 1000);
+  });
+
+  it('tests loadEnv helper with non-existent or existing file and catch block', async () => {
+    const { loadEnv } = await import('../server.js');
+    const nonExistent = loadEnv('non-existent-env-file-xyz');
+    assert.deepEqual(nonExistent, {});
+
+    // Reading directory as file triggers catch block
+    const dirResult = loadEnv(process.cwd());
+    assert.ok(typeof dirResult === 'object');
+  });
+
+  it('tests getClientIp fallback to 127.0.0.1 when headers and socket are empty', async () => {
+    const { getClientIp } = await import('../server.js');
+    assert.equal(getClientIp({ headers: {}, socket: {} }), '127.0.0.1');
+  });
+
+  it('handles stream error in readRequestBody gracefully', async () => {
+    const { EventEmitter } = await import('node:events');
+    const { readRequestBody } = await import('../server.js');
+    const mockReq = new EventEmitter();
+    const promise = readRequestBody(mockReq);
+    mockReq.emit('error', new Error('mock stream failure'));
+    const result = await promise;
+    assert.deepEqual(result, { body: '', limitExceeded: false });
+  });
+
+  it('responds with 500 when plan formulation throws an unexpected error', async () => {
+    const { handlePlanRequest } = await import('../server.js');
+    let statusCode = 0;
+    let responseBody = '';
+    const mockRes = {
+      setHeader: () => {},
+      writeHead: (code) => { statusCode = code; },
+      end: (data) => { responseBody = data; }
+    };
+    const { EventEmitter } = await import('node:events');
+    const mockReq = new EventEmitter();
+    mockReq.headers = { 'content-type': 'application/json' };
+    mockReq.method = 'POST';
+
+    const throwingOptions = {
+      aiOptions: {
+        get timeoutMs() {
+          throw new Error('Forced simulation crash');
+        }
+      }
+    };
+
+    const promise = handlePlanRequest(mockReq, mockRes, throwingOptions, { isRateLimited: () => false }, '127.0.0.1');
+    mockReq.emit('data', Buffer.from(JSON.stringify({
+      eventType: 'wedding',
+      guestCount: 100,
+      totalBudget: 500000,
+      eventDate: '2027-01-01',
+      city: 'Delhi',
+      venueType: 'indoor',
+      diet: 'veg'
+    })));
+    mockReq.emit('end');
+    await promise;
+
+    assert.equal(statusCode, 500);
+    assert.ok(responseBody.includes('Internal server error'));
+  });
+
+  it('tests serverless default handler export and invocation', async () => {
+    const { default: handler } = await import('../server.js');
+    assert.equal(typeof handler, 'function');
+    const mockReq = {
+      url: '/api/health',
+      method: 'GET',
+      headers: { host: 'localhost' },
+      socket: { remoteAddress: '127.0.0.1' }
+    };
+    const mockRes = {
+      setHeader: () => {},
+      writeHead: () => {},
+      end: () => {}
+    };
+    handler(mockReq, mockRes);
+  });
 });

@@ -136,7 +136,9 @@ export async function enrichPlanWithAi(plan, apiKey = (process.env.GROQ_API_KEY 
   const fetchFn = options.fetch || globalThis.fetch;
   const timeoutSignal = AbortSignal.timeout(options.timeoutMs || REQUEST_TIMEOUT_MS);
 
-  const isGroq = activeKey.startsWith('gsk_') || Boolean(process.env.GROQ_API_KEY);
+  const isGroq = options.provider === 'groq' ||
+    activeKey.startsWith('gsk_') ||
+    (Boolean(process.env.GROQ_API_KEY) && activeKey === process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY);
 
   try {
     let candidateText = '';

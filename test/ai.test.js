@@ -146,4 +146,71 @@ describe('AI Module - enrichPlanWithAi Offline & Resiliency', () => {
     assert.equal(result.aiEnriched, false);
     assert.ok(result.aiNotice.includes('timed out'));
   });
+
+  it('handles Groq provider API flow successfully', async () => {
+    const mockGroqFetch = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                summary: 'Groq generated celebration summary.',
+                aiIdeas: ['Groq custom royal idea']
+              })
+            }
+          }
+        ]
+      })
+    });
+
+    const result = await enrichPlanWithAi(basePlan, 'gsk_test_key_abc', { fetch: mockGroqFetch });
+    assert.equal(result.aiEnriched, true);
+    assert.equal(result.summary, 'Groq generated celebration summary.');
+    assert.ok(result.personalizedIdeas.some((i) => i.includes('Groq custom royal idea')));
+    assert.ok(result.aiNotice.includes('Groq GenAI'));
+  });
+
+  it('handles Groq provider API error status gracefully', async () => {
+    const mockGroqFail = async () => ({
+      ok: false,
+      status: 401
+    });
+
+    const result = await enrichPlanWithAi(basePlan, 'gsk_test_key_abc', { fetch: mockGroqFail });
+    assert.equal(result.aiEnriched, false);
+    assert.ok(result.aiNotice.includes('AI service unavailable (status 401)'));
+  });
+
+  it('handles empty candidate text from AI provider', async () => {
+    const mockEmpty = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ candidates: [] })
+    });
+
+    const result = await enrichPlanWithAi(basePlan, 'AIzaTestKey', { fetch: mockEmpty });
+    assert.equal(result.aiEnriched, false);
+    assert.ok(result.aiNotice.includes('empty'));
+  });
+
+  it('handles non-object and empty input in validation helpers', () => {
+    assert.deepEqual(validateAndSanitizeAiOutput(null, 'default'), {
+      summary: 'default',
+      aiIdeas: []
+    });
+    assert.deepEqual(validateAndSanitizeAiOutput('string', 'default'), {
+      summary: 'default',
+      aiIdeas: []
+    });
+    assert.deepEqual(safeParseGeminiResponse('', 'default'), {
+      summary: 'default',
+      aiIdeas: []
+    });
+    assert.deepEqual(safeParseGeminiResponse('   ', 'default'), {
+      summary: 'default',
+      aiIdeas: []
+    });
+  });
 });

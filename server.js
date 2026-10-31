@@ -1,8 +1,8 @@
 /**
  * Utsav Event Planner - Production HTTP Server
- * Zero dependencies, built with native Node.js 18+ modules.
- * Implements strict security headers, rate limiting, payload capping,
- * safe static serving, and REST endpoints.
+ * Zero external runtime dependencies, built using native Node.js 18+ modules.
+ * Implements strict security headers, sliding-window rate limiting with memory cleanup,
+ * payload capping, safe static serving, and REST endpoints.
  */
 
 import http from 'node:http';
@@ -18,12 +18,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PUBLIC_DIR = path.resolve(__dirname, 'public');
 
-// Automatically load local .env without external dependencies if present
-const envPath = path.resolve(__dirname, '.env');
-if (fs.existsSync(envPath)) {
+/**
+ * Loads environment variables from a .env file into process.env without third-party dependencies.
+ * @param {string} [filePath] - Absolute path to .env file
+ * @returns {Record<string, string>} Key-value pairs loaded
+ */
+export function loadEnv(filePath = path.resolve(__dirname, '.env')) {
+  const loaded = {};
+  if (!fs.existsSync(filePath)) {
+    return loaded;
+  }
+
   try {
-    const envLines = fs.readFileSync(envPath, 'utf-8').split(/\r?\n/);
-    for (const line of envLines) {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const lines = content.split(/\r?\n/);
+    for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
         const [k, ...v] = trimmed.split('=');
@@ -32,15 +41,23 @@ if (fs.existsSync(envPath)) {
         if (!process.env[key]) {
           process.env[key] = val;
         }
+        loaded[key] = val;
       }
     }
   } catch {
-    // Silently continue if .env cannot be read
+    // Continue gracefully if .env cannot be read
   }
+
+  return loaded;
 }
 
-// MIME types dictionary for static file serving
-const MIME_TYPES = Object.freeze({
+// Auto-load environment variables on initialization
+loadEnv();
+
+/**
+ * MIME types dictionary for static file serving.
+ */
+export const MIME_TYPES = Object.freeze({
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -51,20 +68,44 @@ const MIME_TYPES = Object.freeze({
 });
 
 /**
- * In-memory sliding-window rate limiter per client IP.
+ * Sliding-window rate limiter per client IP with automatic TTL cleanup to prevent memory leaks.
  */
-class RateLimiter {
+export class RateLimiter {
+  /**
+   * @param {number} [windowMs=60000] - Window duration in milliseconds.
+   * @param {number} [maxRequests=60] - Maximum requests allowed per window.
+   */
   constructor(windowMs = 60000, maxRequests = 60) {
     this.windowMs = windowMs;
     this.maxRequests = maxRequests;
     this.requests = new Map();
   }
 
+  /**
+   * Prunes stale records from memory to prevent unbounded growth.
+   */
+  cleanup() {
+    const now = Date.now();
+    const windowStart = now - this.windowMs;
+    for (const [ip, timestamps] of this.requests.entries()) {
+      const valid = timestamps.filter((t) => t > windowStart);
+      if (valid.length === 0) {
+        this.requests.delete(ip);
+      } else {
+        this.requests.set(ip, valid);
+      }
+    }
+  }
+
+  /**
+   * Determines if a request from the given IP exceeds the limit.
+   * @param {string} ip - Client IP address
+   * @returns {boolean} True if rate-limited
+   */
   isRateLimited(ip) {
     const now = Date.now();
     const clientRecord = this.requests.get(ip) || [];
 
-    // Filter requests within current window
     const windowStart = now - this.windowMs;
     const recentRequests = clientRecord.filter((timestamp) => timestamp > windowStart);
 
@@ -75,9 +116,18 @@ class RateLimiter {
 
     recentRequests.push(now);
     this.requests.set(ip, recentRequests);
+
+    // Opportunistic cleanup when map grows
+    if (this.requests.size > 1000) {
+      this.cleanup();
+    }
+
     return false;
   }
 
+  /**
+   * Clears all stored rate limit records.
+   */
   reset() {
     this.requests.clear();
   }
@@ -103,9 +153,47 @@ export function applySecurityHeaders(res) {
  * @returns {string}
  */
 export function getClientIp(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0].trim() ||
-    req.socket.remoteAddress ||
-    '127.0.0.1';
+  return (
+    req.headers?.['x-forwarded-for']?.split(',')[0].trim() ||
+    req.socket?.remoteAddress ||
+    '127.0.0.1'
+  );
+}
+
+/**
+ * Safely reads the incoming request body with strict size capping.
+ * @param {http.IncomingMessage} req
+ * @param {number} maxBytes
+ * @returns {Promise<{ body: string, limitExceeded: boolean }>}
+ */
+export function readRequestBody(req, maxBytes = INPUT_LIMITS.MAX_BODY_BYTES) {
+  return new Promise((resolve) => {
+    let body = '';
+    let bodySize = 0;
+    let limitExceeded = false;
+
+    req.on('data', (chunk) => {
+      if (limitExceeded) return;
+      bodySize += chunk.length;
+      if (bodySize > maxBytes) {
+        limitExceeded = true;
+        req.resume(); // Discard remainder without abruptly resetting socket
+        resolve({ body: '', limitExceeded: true });
+        return;
+      }
+      body += chunk.toString('utf-8');
+    });
+
+    req.on('end', () => {
+      if (!limitExceeded) {
+        resolve({ body, limitExceeded: false });
+      }
+    });
+
+    req.on('error', () => {
+      resolve({ body: '', limitExceeded: false });
+    });
+  });
 }
 
 /**
@@ -115,7 +203,6 @@ export function getClientIp(req) {
  */
 export function serveStaticFile(reqPath, res) {
   let relativePath = reqPath === '/' ? '/index.html' : reqPath;
-  // Decode URL and strip query strings or hash
   relativePath = decodeURIComponent(relativePath.split('?')[0]);
 
   const filePath = path.resolve(PUBLIC_DIR, '.' + relativePath);
@@ -152,6 +239,112 @@ export function serveStaticFile(reqPath, res) {
 }
 
 /**
+ * Handles the health check endpoint.
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse} res
+ */
+export function handleHealthCheck(req, res) {
+  if (req.method !== 'GET') {
+    res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({ status: 'healthy', uptime: process.uptime() }));
+}
+
+/**
+ * Handles the planning API endpoint.
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse} res
+ * @param {Object} options
+ * @param {RateLimiter} rateLimiter
+ * @param {string} clientIp
+ */
+export async function handlePlanRequest(req, res, options, rateLimiter, clientIp) {
+  if (req.method !== 'POST') {
+    res.writeHead(405, {
+      Allow: 'POST',
+      'Content-Type': 'application/json; charset=utf-8'
+    });
+    return res.end(JSON.stringify({
+      success: false,
+      errors: ['Method Not Allowed. Use POST.']
+    }));
+  }
+
+  if (rateLimiter.isRateLimited(clientIp)) {
+    res.writeHead(429, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Retry-After': '60'
+    });
+    return res.end(JSON.stringify({
+      success: false,
+      errors: ['Too many requests. Please wait a minute before submitting again.']
+    }));
+  }
+
+  const contentType = req.headers['content-type'] || '';
+  if (!contentType.toLowerCase().startsWith('application/json')) {
+    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({
+      success: false,
+      errors: ['Invalid Content-Type: Must be application/json.']
+    }));
+  }
+
+  const { body, limitExceeded } = await readRequestBody(req, INPUT_LIMITS.MAX_BODY_BYTES);
+  if (limitExceeded) {
+    res.writeHead(413, { 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({
+      success: false,
+      errors: [`Payload Too Large: Maximum allowed size is ${INPUT_LIMITS.MAX_BODY_BYTES} bytes.`]
+    }));
+  }
+
+  let parsedBody;
+  try {
+    parsedBody = JSON.parse(body);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({
+      success: false,
+      errors: ['Malformed JSON in request body.']
+    }));
+  }
+
+  const validation = validatePlanningInput(parsedBody);
+  if (!validation.valid) {
+    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({
+      success: false,
+      errors: validation.errors
+    }));
+  }
+
+  try {
+    const plan = generatePlan(validation.sanitized);
+    const enrichedPlan = await enrichPlanWithAi(
+      plan,
+      process.env.GEMINI_API_KEY,
+      options.aiOptions
+    );
+
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({
+      success: true,
+      data: enrichedPlan
+    }));
+  } catch {
+    res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({
+      success: false,
+      errors: ['Internal server error while formulating plan.']
+    }));
+  }
+}
+
+/**
  * Creates the HTTP application server.
  * @param {Object} [options]
  * @returns {http.Server}
@@ -167,152 +360,41 @@ export function createServer(options = {}) {
     const pathname = url.pathname;
     const clientIp = getClientIp(req);
 
-    // Apply security headers
     applySecurityHeaders(res);
 
-    // 1. Health check endpoint
     if (pathname === '/api/health') {
-      if (req.method !== 'GET') {
-        res.writeHead(405, { 'Allow': 'GET', 'Content-Type': 'application/json; charset=utf-8' });
-        return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
-      }
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-      return res.end(JSON.stringify({ status: 'healthy', uptime: process.uptime() }));
+      return handleHealthCheck(req, res);
     }
 
-    // 2. Planning API endpoint
     if (pathname === '/api/plan') {
-      // Disallow non-POST methods
-      if (req.method !== 'POST') {
-        res.writeHead(405, {
-          'Allow': 'POST',
-          'Content-Type': 'application/json; charset=utf-8'
-        });
-        return res.end(JSON.stringify({
-          success: false,
-          errors: ['Method Not Allowed. Use POST.']
-        }));
-      }
-
-      // Rate limit check
-      if (rateLimiter.isRateLimited(clientIp)) {
-        res.writeHead(429, {
-          'Content-Type': 'application/json; charset=utf-8',
-          'Retry-After': '60'
-        });
-        return res.end(JSON.stringify({
-          success: false,
-          errors: ['Too many requests. Please wait a minute before submitting again.']
-        }));
-      }
-
-      // Content-Type validation
-      const contentType = req.headers['content-type'] || '';
-      if (!contentType.toLowerCase().startsWith('application/json')) {
-        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-        return res.end(JSON.stringify({
-          success: false,
-          errors: ['Invalid Content-Type: Must be application/json.']
-        }));
-      }
-
-      // Read body with payload size enforcement
-      let body = '';
-      let bodySize = 0;
-      let limitExceeded = false;
-
-      req.on('data', (chunk) => {
-        if (limitExceeded) return;
-        bodySize += chunk.length;
-        if (bodySize > INPUT_LIMITS.MAX_BODY_BYTES) {
-          limitExceeded = true;
-          res.writeHead(413, { 'Content-Type': 'application/json; charset=utf-8' });
-          res.end(JSON.stringify({
-            success: false,
-            errors: [`Payload Too Large: Maximum allowed size is ${INPUT_LIMITS.MAX_BODY_BYTES} bytes.`]
-          }));
-          req.destroy();
-        } else {
-          body += chunk.toString('utf-8');
-        }
-      });
-
-      req.on('end', async () => {
-        if (limitExceeded) return;
-
-        let parsedBody;
-        try {
-          parsedBody = JSON.parse(body);
-        } catch {
-          res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-          return res.end(JSON.stringify({
-            success: false,
-            errors: ['Malformed JSON in request body.']
-          }));
-        }
-
-        // Strict Server-Side Validation
-        const validation = validatePlanningInput(parsedBody);
-        if (!validation.valid) {
-          res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-          return res.end(JSON.stringify({
-            success: false,
-            errors: validation.errors
-          }));
-        }
-
-        try {
-          // 1. Pure Deterministic Plan
-          const plan = generatePlan(validation.sanitized);
-
-          // 2. GenAI Layer (non-blocking fallback)
-          const enrichedPlan = await enrichPlanWithAi(
-            plan,
-            process.env.GEMINI_API_KEY,
-            options.aiOptions
-          );
-
-          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-          res.end(JSON.stringify({
-            success: true,
-            data: enrichedPlan
-          }));
-        } catch (planError) {
-          res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
-          res.end(JSON.stringify({
-            success: false,
-            errors: ['Internal server error while formulating plan.']
-          }));
-        }
-      });
-
-      return;
+      return handlePlanRequest(req, res, options, rateLimiter, clientIp);
     }
 
-    // 3. Static File Serving (HTML, CSS, JS, etc.)
     if (req.method === 'GET') {
       return serveStaticFile(pathname, res);
     }
 
-    // Default 405 for any other method on static paths
-    res.writeHead(405, { 'Allow': 'GET', 'Content-Type': 'application/json; charset=utf-8' });
+    res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: 'Method Not Allowed' }));
   });
 }
 
 // Default handler for Vercel Serverless environment
 const defaultAppServer = createServer();
+
+/**
+ * Serverless request handler for Vercel.
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse} res
+ */
 export default function handler(req, res) {
   defaultAppServer.emit('request', req, res);
 }
 
-/**
- * Starts the server if run directly.
- */
+// Start server if directly executed
 if (process.argv[1] && process.argv[1] === fileURLToPath(import.meta.url)) {
   const PORT = process.env.PORT || 3000;
   defaultAppServer.listen(PORT, () => {
     console.log(`Utsav Celebration Planner server running at http://localhost:${PORT}`);
   });
 }
-

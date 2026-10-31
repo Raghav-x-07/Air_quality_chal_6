@@ -141,4 +141,18 @@ describe('Validation Module - validatePlanningInput', () => {
     assert.equal(validatePlanningInput('string', refDate).valid, false);
     assert.equal(validatePlanningInput([1, 2, 3], refDate).valid, false);
   });
+
+  it('rejects preferences exceeding 500 characters', () => {
+    const longPrefs = { ...validPayload, preferences: 'A'.repeat(505) };
+    const res = validatePlanningInput(longPrefs, refDate);
+    assert.equal(res.valid, false);
+    assert.ok(res.errors.some((e) => e.includes('preferences')));
+  });
+
+  it('rejects invalid or non-ISO eventDate strings', () => {
+    const invalidDate = { ...validPayload, eventDate: 'not-a-date' };
+    const res = validatePlanningInput(invalidDate, refDate);
+    assert.equal(res.valid, false);
+    assert.ok(res.errors.some((e) => e.includes('eventDate')));
+  });
 });

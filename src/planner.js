@@ -24,12 +24,16 @@ import {
  * @returns {{ categories: Array<{ id: string, name: string, percent: number, amount: number }>, totalBudget: number, checkSum: number }}
  */
 export function calculateBudgetBreakdown(eventType, venueType, totalBudget) {
+  const cleanBudget = typeof totalBudget === 'number' && Number.isFinite(totalBudget)
+    ? Math.max(0, Math.round(totalBudget))
+    : 0;
+
   const allocationRules = BUDGET_ALLOCATIONS[eventType]?.[venueType] ||
     BUDGET_ALLOCATIONS[EVENT_TYPES.WEDDING][VENUE_TYPES.INDOOR];
 
   // Step 1: Compute initial amounts with floor
   const categories = allocationRules.map((cat) => {
-    const rawAmount = (totalBudget * cat.percent) / 100;
+    const rawAmount = (cleanBudget * cat.percent) / 100;
     return {
       id: cat.id,
       name: cat.name,
@@ -41,7 +45,7 @@ export function calculateBudgetBreakdown(eventType, venueType, totalBudget) {
 
   // Step 2: Calculate difference due to integer rounding
   const currentSum = categories.reduce((acc, cat) => acc + cat.amount, 0);
-  let discrepancy = totalBudget - currentSum;
+  let discrepancy = cleanBudget - currentSum;
 
   // Step 3: Distribute remaining rupees to categories with highest fractional remainders
   const sortedByRemainder = [...categories].sort(
@@ -65,7 +69,7 @@ export function calculateBudgetBreakdown(eventType, venueType, totalBudget) {
 
   return {
     categories: finalCategories,
-    totalBudget,
+    totalBudget: cleanBudget,
     checkSum: finalSum
   };
 }
@@ -77,6 +81,15 @@ export function calculateBudgetBreakdown(eventType, venueType, totalBudget) {
  * @returns {number} Days difference (positive or zero)
  */
 export function calculateDaysBetween(startDate, endDate) {
+  if (
+    !(startDate instanceof Date) ||
+    !(endDate instanceof Date) ||
+    Number.isNaN(startDate.getTime()) ||
+    Number.isNaN(endDate.getTime())
+  ) {
+    return 0;
+  }
+
   const startUTC = Date.UTC(
     startDate.getFullYear(),
     startDate.getMonth(),
@@ -97,6 +110,9 @@ export function calculateDaysBetween(startDate, endDate) {
  * @returns {string}
  */
 export function formatDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return '';
+  }
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -131,9 +147,15 @@ export function generateTimeline(eventType, eventDateStr, referenceDate = new Da
     const milestoneDate = new Date(eventDate);
     milestoneDate.setDate(milestoneDate.getDate() - offsetDays);
 
-    // If compressed or today, ensure milestone date does not fall before referenceDate
-    if (milestoneDate.getTime() < referenceDate.setHours(0, 0, 0, 0)) {
-      milestoneDate.setTime(referenceDate.getTime());
+    // If compressed or today, ensure milestone date does not fall before start of referenceDate (without mutating referenceDate)
+    const refStartOfDay = new Date(
+      referenceDate.getFullYear(),
+      referenceDate.getMonth(),
+      referenceDate.getDate()
+    ).getTime();
+
+    if (milestoneDate.getTime() < refStartOfDay) {
+      milestoneDate.setTime(refStartOfDay);
     }
 
     return {
@@ -170,9 +192,10 @@ export function generateTimeline(eventType, eventDateStr, referenceDate = new Da
  * @param {Array<Object>} budgetCategories - Calculated budget breakdown categories
  * @returns {Array<Object>}
  */
-export function generateVendorChecklist(eventType, venueType, budgetCategories) {
+export function generateVendorChecklist(eventType, venueType, budgetCategories = []) {
   const baseVendors = VENDOR_TEMPLATES[eventType] || VENDOR_TEMPLATES[EVENT_TYPES.WEDDING];
-  const categoryMap = new Map(budgetCategories.map((c) => [c.id, c.amount]));
+  const safeCategories = Array.isArray(budgetCategories) ? budgetCategories : [];
+  const categoryMap = new Map(safeCategories.map((c) => [c.id, c.amount]));
 
   const checklist = baseVendors.map((vendor) => {
     let suggestedBudget = 0;
@@ -233,9 +256,10 @@ export function generateVendorChecklist(eventType, venueType, budgetCategories) 
  * @param {number} availableDays - Days remaining until event
  * @returns {Array<{ id: string, type: 'warning' | 'caution' | 'alert', message: string }>}
  */
-export function generateWarnings(input, availableDays) {
+export function generateWarnings(input, availableDays = 0) {
+  if (!input || typeof input !== 'object') return [];
   const warnings = [];
-  const { eventType, guestCount, totalBudget, venueType, diet } = input;
+  const { eventType, guestCount = 1, totalBudget = 0, venueType, diet } = input;
 
   // 1. Per-guest budget tightness check
   const perGuest = Math.round(totalBudget / guestCount);
@@ -303,10 +327,11 @@ export function generateWarnings(input, availableDays) {
  * @returns {Array<string>} List of personalized ideas
  */
 export function generateDeterministicIdeas(input) {
-  const { eventType, guestCount, city, diet, preferences } = input;
+  if (!input || typeof input !== 'object') return [];
+  const { eventType, guestCount = 0, city = '', diet = '', preferences = '' } = input;
   const ideas = [];
-  const lowerCity = city.toLowerCase();
-  const lowerPrefs = preferences.toLowerCase();
+  const lowerCity = String(city || '').toLowerCase();
+  const lowerPrefs = String(preferences || '').toLowerCase();
 
   // 1. Regional Indian City Flavor
   if (lowerCity.includes('delhi') || lowerCity.includes('ncr') || lowerCity.includes('gurgaon') || lowerCity.includes('noida')) {
