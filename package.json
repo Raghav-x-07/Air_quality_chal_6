@@ -1,7 +1,7 @@
 {
-  "name": "utsav-planner",
+  "name": "urban-air-quality-assistant",
   "version": "1.0.0",
-  "description": "GenAI-powered Indian celebration and event planning assistant (Weddings, Birthdays, Community Events)",
+  "description": "GenAI-powered Urban Air Quality Assistant helping families and communities navigate severe winter smog with low-emission routines, indoor air quality hacks, and sustainable alternatives.",
   "type": "module",
   "main": "server.js",
   "scripts": {
@@ -10,13 +10,16 @@
     "test:coverage": "node --experimental-test-coverage --test test/**/*.test.js"
   },
   "keywords": [
-    "event-planner",
-    "indian-weddings",
-    "birthday-planning",
-    "community-events",
-    "inr-budget",
+    "urban-air-quality",
+    "smog-defense",
     "genai",
-    "gemini"
+    "gemini",
+    "groq",
+    "aqi",
+    "indoor-air-quality",
+    "berkeley-earth",
+    "corsi-rosenthal",
+    "clean-air"
   ],
   "author": "Antigravity Engineering",
   "license": "MIT",

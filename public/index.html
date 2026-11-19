@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Utsav Planner: GenAI-powered celebration assistant for Indian weddings, birthdays, and community events with exact INR budgets, compressed timelines, and vendor checklists.">
-  <title>Utsav Planner - Indian Celebration & Event Assistant</title>
+  <meta name="description" content="Prana: GenAI-powered Urban Air Quality Assistant helping families and communities navigate severe winter smog with low-emission routines, indoor air quality hacks, and measurable impact metrics.">
+  <title>Prana - Urban Air Quality & Smog Defense Assistant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,14 +17,14 @@
   <header class="app-header" role="banner">
     <div class="header-container">
       <div class="brand">
-        <div class="brand-symbol" aria-hidden="true">🪔</div>
+        <div class="brand-symbol" aria-hidden="true">🍃</div>
         <div class="brand-text">
-          <h1 class="brand-title">Utsav Planner</h1>
-          <p class="brand-subtitle">Smart Indian Celebration & Event Planning Assistant</p>
+          <h1 class="brand-title">Prana Air Assistant</h1>
+          <p class="brand-subtitle">Urban Smog Defense, Low-Emission Living & Clean Indoor Air</p>
         </div>
       </div>
       <div class="header-badges">
-        <span class="badge badge-currency" title="All calculations in Indian Rupees">₹ INR Indian Standard</span>
+        <span class="badge badge-standard" title="Calibrated against CPCB and WHO Air Quality Breakpoints">CPCB & WHO Benchmarks</span>
         <span class="badge badge-ai" id="ai-status-badge">Offline Fallback Ready</span>
         <button id="theme-toggle-btn" class="btn-theme-toggle" type="button" aria-label="Toggle visual theme between light and dark mode" aria-pressed="false">
           <span class="theme-icon" aria-hidden="true">🌓</span>
@@ -38,18 +38,20 @@
     <!-- Top Introduction & Presets -->
     <section class="intro-section" aria-labelledby="intro-heading">
       <div class="intro-content">
-        <h2 id="intro-heading" class="intro-title">Plan Your Auspicious Celebration with Precision</h2>
+        <h2 id="intro-heading" class="intro-title">Navigate Severe Winter Smog with Evidence-Based Action</h2>
         <p class="intro-description">
-          Generate an exact rupee-balanced budget, customized vendor checklist, milestone countdown timeline,
-          and regional Indian cultural ideas for weddings, birthdays, and community gatherings.
+          Generate customized diurnal schedules, low-cost DIY indoor air purification hacks,
+          and sustainable commute alternatives tailored to your city, housing, and family profile—with exact
+          quantified PM2.5 exposure and equivalent cigarette reduction metrics.
         </p>
       </div>
 
-      <div class="presets-container" role="group" aria-label="Quick preset samples">
+      <div class="presets-container" role="group" aria-label="Quick demonstration presets">
         <span class="preset-label">Quick Sample Presets:</span>
-        <button type="button" class="btn-preset" id="preset-wedding">Jaipur Royal Wedding (₹15 Lakh)</button>
-        <button type="button" class="btn-preset" id="preset-birthday">Bengaluru Theme Birthday (₹60,000)</button>
-        <button type="button" class="btn-preset" id="preset-community">Mumbai Society Diwali Utsav (₹2 Lakh)</button>
+        <button type="button" class="btn-preset" id="preset-delhi-family">Delhi NCR Family (AQI 420)</button>
+        <button type="button" class="btn-preset" id="preset-mumbai-commuter">Mumbai Bike Commuter (AQI 240)</button>
+        <button type="button" class="btn-preset" id="preset-rwa-community">Gurugram RWA Society (AQI 460)</button>
+        <button type="button" class="btn-preset" id="preset-bengaluru-eco">Bengaluru Eco Home (AQI 135)</button>
       </div>
     </section>
 
@@ -62,138 +64,223 @@
       <button type="button" id="close-error-btn" class="btn-close-error" aria-label="Dismiss error messages"><span aria-hidden="true">&times;</span></button>
     </div>
 
-    <!-- Main Grid: Form on Left/Top, Output on Right/Bottom -->
+    <!-- Main Grid: Input Form on Left, Output on Right -->
     <div class="planner-grid">
       <!-- Input Section -->
       <section class="card form-card" aria-labelledby="form-heading">
         <div class="card-header">
-          <h2 id="form-heading" class="card-title">Event Parameters</h2>
-          <p class="card-subtitle">Fill in your event details to generate an intelligent plan.</p>
+          <h2 id="form-heading" class="card-title">Environmental & Household Profile</h2>
+          <p class="card-subtitle">Provide your location and lifestyle details to formulate your defense plan.</p>
         </div>
 
         <form id="planning-form" class="planning-form" novalidate>
-          <!-- Event Type -->
+          <!-- User / Scale Type -->
           <div class="form-group">
-            <label for="event-type" class="form-label">
-              Celebration Type <span class="required" aria-hidden="true">*</span>
+            <label for="user-type" class="form-label">
+              Assessment Scale <span class="required" aria-hidden="true">*</span>
             </label>
-            <select id="event-type" name="eventType" class="form-select" required aria-describedby="event-type-help">
-              <option value="wedding">Wedding (Vivah / Shaadi)</option>
-              <option value="birthday">Birthday Party (Janamdin)</option>
-              <option value="community">Community / Society Festival (Utsav / Puja)</option>
+            <select id="user-type" name="userType" class="form-select" required aria-describedby="user-type-help">
+              <option value="family">Individual Household / Family</option>
+              <option value="community">Community / RWA Housing Society / School</option>
             </select>
-            <small id="event-type-help" class="form-help">Select the event category to tailor budget weights and vendors.</small>
+            <small id="user-type-help" class="form-help">Select whether this plan is for a private home or a community collective.</small>
           </div>
 
-          <!-- Total Budget & Guest Count Row -->
+          <!-- City & Area Type Row -->
           <div class="form-row">
-            <div class="form-group form-col">
-              <label for="total-budget" class="form-label">
-                Total Budget (₹ INR) <span class="required" aria-hidden="true">*</span>
-              </label>
-              <div class="input-prefix-wrapper">
-                <span class="input-prefix" aria-hidden="true">₹</span>
-                <input
-                  type="number"
-                  id="total-budget"
-                  name="totalBudget"
-                  class="form-input with-prefix"
-                  min="2000"
-                  max="500000000"
-                  step="1000"
-                  placeholder="e.g. 500000"
-                  required
-                  aria-describedby="budget-help"
-                >
-              </div>
-              <small id="budget-help" class="form-help">Minimum ₹2,000 up to ₹50 Crores.</small>
-            </div>
-
-            <div class="form-group form-col">
-              <label for="guest-count" class="form-label">
-                Estimated Guests <span class="required" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="number"
-                id="guest-count"
-                name="guestCount"
-                class="form-input"
-                min="5"
-                max="10000"
-                step="1"
-                placeholder="e.g. 150"
-                required
-                aria-describedby="guest-help"
-              >
-              <small id="guest-help" class="form-help">Between 5 and 10,000 attendees.</small>
-            </div>
-          </div>
-
-          <!-- Event Date & City Row -->
-          <div class="form-row">
-            <div class="form-group form-col">
-              <label for="event-date" class="form-label">
-                Celebration Date <span class="required" aria-hidden="true">*</span>
-              </label>
-              <input
-                type="date"
-                id="event-date"
-                name="eventDate"
-                class="form-input"
-                required
-                aria-describedby="date-help"
-              >
-              <small id="date-help" class="form-help">Must be today or in the future.</small>
-            </div>
-
             <div class="form-group form-col">
               <label for="city" class="form-label">
-                City / Location in India <span class="required" aria-hidden="true">*</span>
+                City / Metro Region <span class="required" aria-hidden="true">*</span>
               </label>
               <input
                 type="text"
                 id="city"
                 name="city"
                 class="form-input"
-                maxlength="80"
-                placeholder="e.g. Jaipur, Delhi, Mumbai, Chennai"
+                placeholder="e.g. Delhi NCR, Mumbai, Patna"
+                list="popular-cities"
                 required
+                maxlength="80"
                 aria-describedby="city-help"
               >
-              <small id="city-help" class="form-help">Guides regional food and cultural traditions.</small>
+              <datalist id="popular-cities">
+                <option value="Delhi NCR">
+                <option value="Mumbai">
+                <option value="Kolkata">
+                <option value="Bengaluru">
+                <option value="Patna">
+                <option value="Lucknow">
+                <option value="Kanpur">
+                <option value="Varanasi">
+                <option value="Gurugram">
+                <option value="Noida">
+                <option value="Hyderabad">
+                <option value="Jaipur">
+              </datalist>
+              <small id="city-help" class="form-help">Major city or municipal region.</small>
+            </div>
+
+            <div class="form-group form-col">
+              <label for="area-type" class="form-label">
+                Local Area Setting <span class="required" aria-hidden="true">*</span>
+              </label>
+              <select id="area-type" name="areaType" class="form-select" required aria-describedby="area-help">
+                <option value="urban_core">Urban Core (Dense Traffic & Canyons)</option>
+                <option value="industrial_corridor">Industrial Corridor (Factories & Trucks)</option>
+                <option value="near_highway">Near Highway / Arterial Road</option>
+                <option value="residential_suburb" selected>Residential Suburb / Mixed</option>
+                <option value="green_zone">Green Zone / Park Adjacent</option>
+              </select>
+              <small id="area-help" class="form-help">Micro-environment influences local particulate density.</small>
             </div>
           </div>
 
-          <!-- Setting & Diet Row -->
+          <!-- Current AQI Slider & Indicator Row -->
+          <div class="form-group aqi-container">
+            <div class="aqi-header">
+              <label for="aqi-level" class="form-label">
+                Current Ambient Air Quality Index (AQI) <span class="required" aria-hidden="true">*</span>
+              </label>
+              <span id="aqi-indicator-badge" class="aqi-badge aqi-severe">420 - Severe</span>
+            </div>
+            <div class="aqi-slider-row">
+              <input
+                type="range"
+                id="aqi-level"
+                name="aqiLevel"
+                class="form-range"
+                min="20"
+                max="600"
+                value="420"
+                aria-describedby="aqi-help"
+              >
+              <input
+                type="number"
+                id="aqi-number-input"
+                class="form-input aqi-number-box"
+                min="10"
+                max="999"
+                value="420"
+                aria-label="Exact numerical AQI"
+              >
+            </div>
+            <small id="aqi-help" class="form-help">Slide or type your local CPCB / weather app AQI reading (0-50: Good, 101-200: Moderate, 301-400: Very Poor, 400+: Severe).</small>
+          </div>
+
+          <!-- Household Size & Housing Type Row -->
           <div class="form-row">
             <div class="form-group form-col">
-              <label for="venue-type" class="form-label">
-                Venue Setting <span class="required" aria-hidden="true">*</span>
+              <label for="household-size" class="form-label">
+                Occupants / Residents <span class="required" aria-hidden="true">*</span>
               </label>
-              <select id="venue-type" name="venueType" class="form-select" required aria-describedby="venue-help">
-                <option value="indoor">Indoor (Banquet / AC Hall / Hotel)</option>
-                <option value="outdoor">Outdoor (Lawn / Ground / Open Terrace)</option>
-              </select>
-              <small id="venue-help" class="form-help">Outdoor includes weather backup and genset power allocations.</small>
+              <input
+                type="number"
+                id="household-size"
+                name="householdSize"
+                class="form-input"
+                min="1"
+                max="10000"
+                value="4"
+                required
+                aria-describedby="size-help"
+              >
+              <small id="size-help" class="form-help">Number of persons protected by this plan.</small>
             </div>
 
             <div class="form-group form-col">
-              <label for="diet" class="form-label">
-                Dietary Preference <span class="required" aria-hidden="true">*</span>
+              <label for="housing-type" class="form-label">
+                Housing Structure <span class="required" aria-hidden="true">*</span>
               </label>
-              <select id="diet" name="diet" class="form-select" required aria-describedby="diet-help">
-                <option value="veg">100% Vegetarian / Pure Veg / Jain</option>
-                <option value="mixed">Mixed (Vegetarian & Non-Veg Counters)</option>
-                <option value="non-veg">Non-Vegetarian Speciality</option>
+              <select id="housing-type" name="housingType" class="form-select" required aria-describedby="housing-help">
+                <option value="apartment_high_floor" selected>Apartment High Floor (5th floor & above)</option>
+                <option value="apartment_low_floor">Apartment Low Floor (Ground to 4th)</option>
+                <option value="independent_house">Independent Standalone Villa / Kothi</option>
+                <option value="rented_budget">Rented Flat (Non-modifiable infrastructure)</option>
               </select>
-              <small id="diet-help" class="form-help">Shapes menu courses and segregation precautions.</small>
+              <small id="housing-help" class="form-help">Determines smog infiltration drafts and DIY hack feasibility.</small>
             </div>
           </div>
 
-          <!-- Free-text Preferences -->
+          <!-- Commute Mode & Heating/Cooking Row -->
+          <div class="form-row">
+            <div class="form-group form-col">
+              <label for="primary-commute" class="form-label">
+                Primary Commute Mode <span class="required" aria-hidden="true">*</span>
+              </label>
+              <select id="primary-commute" name="primaryCommute" class="form-select" required aria-describedby="commute-help">
+                <option value="two_wheeler" selected>Motorcycle / Scooter (Direct exposure)</option>
+                <option value="public_transit">Metro / AC Electric Bus</option>
+                <option value="personal_car">Personal Car (Petrol / Diesel)</option>
+                <option value="carpool_cab">Shared Taxi / Carpooling</option>
+                <option value="active_walk_cycle">Walking / Bicycle</option>
+                <option value="work_from_home">Work From Home (Zero commute)</option>
+              </select>
+              <small id="commute-help" class="form-help">Shapes your daily transit inhalation risk.</small>
+            </div>
+
+            <div class="form-group form-col">
+              <label for="cooking-heating" class="form-label">
+                Cooking & Heating Setup <span class="required" aria-hidden="true">*</span>
+              </label>
+              <select id="cooking-heating" name="cookingHeating" class="form-select" required aria-describedby="cooking-help">
+                <option value="lpg_gas" selected>LPG Gas Stove + Electric Heater</option>
+                <option value="induction_electric">100% Induction Electric (Zero combustion)</option>
+                <option value="electric_heater">Electric Radiator Heating</option>
+                <option value="biomass_wood">Biomass / Firewood / Kerosene</option>
+                <option value="unvented_sigri">Coal / Charcoal Brazier (Sigri)</option>
+              </select>
+              <small id="cooking-help" class="form-help">Major driver of indoor PM2.5 and Carbon Monoxide spikes.</small>
+            </div>
+          </div>
+
+          <!-- Vulnerable Demographic Checkboxes -->
+          <fieldset class="form-group">
+            <legend class="form-label">Vulnerable Household Demographics</legend>
+            <div class="checkbox-grid" role="group" aria-label="Select all vulnerable members present">
+              <label class="checkbox-item">
+                <input type="checkbox" name="vulnerableMembers" value="infants_children" checked>
+                <span>👶 Infants / Toddlers / School Children</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="vulnerableMembers" value="elderly" checked>
+                <span>👵 Senior Citizens (60+ yrs)</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="vulnerableMembers" value="asthmatic_respiratory" checked>
+                <span>🫁 Asthma / COPD / Bronchitis</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="vulnerableMembers" value="pregnant">
+                <span>🤰 Expecting Mothers</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="vulnerableMembers" value="outdoor_commuters">
+                <span>🛵 Daily Outdoor Commuters</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" name="vulnerableMembers" value="pets">
+                <span>🐾 Domestic Pets (Dogs / Cats)</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Budget Preference -->
+          <div class="form-group">
+            <label for="budget-preference" class="form-label">
+              Intervention Budget Preference <span class="required" aria-hidden="true">*</span>
+            </label>
+            <select id="budget-preference" name="budgetPreference" class="form-select" required aria-describedby="budget-pref-help">
+              <option value="low_cost_diy" selected>Low-Cost DIY Hacks (DIY Box Filter, Weather-stripping, Wet-mop under ₹2,500)</option>
+              <option value="balanced">Balanced (Commercial HEPA Purifier + DIY Draft Sealing)</option>
+              <option value="premium_automated">Premium Automated (Smart Multi-Room HEPA + IAQ Monitors + ERV)</option>
+            </select>
+            <small id="budget-pref-help" class="form-help">Tailors recommendations to your financial investment appetite.</small>
+          </div>
+
+          <!-- Unique Notes / Constraints -->
           <div class="form-group">
             <label for="preferences" class="form-label">
-              Special Preferences & Themes <span class="optional">(Optional)</span>
+              Specific Needs, Medical Constraints, or Community Notes (Optional)
             </label>
             <textarea
               id="preferences"
@@ -201,154 +288,177 @@
               class="form-textarea"
               rows="3"
               maxlength="500"
-              placeholder="e.g. Royal Rajasthani theme, live Sufi band, eco-friendly seed favours, zero food waste..."
-              aria-describedby="pref-help pref-counter"
+              placeholder="e.g. 7-year-old child takes morning school bus; need DIY air purifier under ₹2,000; RWA needs anti-idling gate rules..."
+              aria-describedby="pref-counter"
             ></textarea>
-            <div class="textarea-footer">
-              <small id="pref-help" class="form-help">Max 500 characters. Sanitized automatically.</small>
-              <span id="pref-counter" class="char-counter" aria-live="off">0 / 500</span>
+            <div class="char-counter">
+              <span id="pref-counter">0 / 500 characters</span>
             </div>
           </div>
 
-          <button type="submit" id="submit-plan-btn" class="btn btn-primary btn-block">
-            <span class="btn-icon" aria-hidden="true">✨</span>
-            <span class="btn-text">Generate Celebration Plan</span>
-          </button>
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <button type="submit" id="submit-plan-btn" class="btn-submit">
+              <span class="btn-text">Generate Smog Defense Plan 🛡️</span>
+              <span class="spinner" aria-hidden="true" hidden></span>
+            </button>
+          </div>
         </form>
       </section>
 
-      <!-- Output Section (Initially Shows Empty State) -->
-      <section class="card output-card" id="output-section" aria-labelledby="output-heading">
-        <div class="card-header output-header-bar">
+      <!-- Output Section -->
+      <section class="card output-card" aria-labelledby="output-heading">
+        <div class="card-header output-header">
           <div>
-            <h2 id="output-heading" class="card-title">Celebration Plan Overview</h2>
-            <p id="plan-timestamp" class="card-subtitle">Your customized plan will appear here.</p>
+            <h2 id="output-heading" class="card-title">Smog Defense & Clean Air Plan</h2>
+            <p class="card-subtitle">Personalized low-emission routines and verified direct impact metrics.</p>
           </div>
-          <div class="export-actions" id="export-actions" hidden>
-            <button type="button" id="btn-print" class="btn btn-secondary btn-sm" title="Print plan or save as PDF">
-              <span aria-hidden="true">🖨️</span> Print / Save as PDF
+          <!-- Action Buttons (Print, JSON Download, Copy) -->
+          <div id="export-actions" class="export-actions" hidden>
+            <button type="button" id="btn-copy-plan" class="btn-action" title="Copy Assessment Summary to Clipboard">
+              📋 Copy Summary
             </button>
-            <button type="button" id="btn-download-json" class="btn btn-secondary btn-sm" title="Download plan as JSON data">
-              <span aria-hidden="true">📥</span> Download JSON
+            <button type="button" id="btn-print" class="btn-action" title="Print or save as PDF">
+              🖨️ Print / PDF
+            </button>
+            <button type="button" id="btn-download-json" class="btn-action" title="Export Raw Assessment Data">
+              ⬇️ Export JSON
             </button>
           </div>
         </div>
 
-        <!-- Accessible Live Region for Screen Readers -->
-        <div id="plan-live-status" class="sr-only" aria-live="polite"></div>
+        <!-- Live Region for Async Screen-Reader Announcements -->
+        <div id="plan-live-status" class="visually-hidden" aria-live="polite"></div>
 
-        <!-- Initial Placeholder State -->
-        <div id="empty-state" class="empty-state">
-          <div class="empty-icon" aria-hidden="true">📋</div>
-          <h3 class="empty-title">Ready to Plan Your Big Day</h3>
+        <!-- Empty State Prompt -->
+        <div id="empty-state" class="state-container empty-state">
+          <div class="empty-icon" aria-hidden="true">🌬️</div>
+          <h3 class="empty-title">No Smog Defense Plan Generated Yet</h3>
           <p class="empty-text">
-            Enter your celebration details or choose a sample preset above, then click
-            <strong>"Generate Celebration Plan"</strong> to build your comprehensive breakdown.
+            Configure your environmental profile on the left or select a <strong>Quick Sample Preset</strong> above
+            to formulate your personalized low-emission daily routine and indoor air quality hacks.
           </p>
         </div>
 
-        <!-- Loading State -->
-        <div id="loading-state" class="loading-state" hidden>
-          <div class="spinner" role="status" aria-label="Calculating plan..."></div>
-          <p class="loading-text" id="loading-message">Formulating exact INR budget and milestone schedule...</p>
+        <!-- Loading State Skeleton -->
+        <div id="loading-state" class="state-container loading-state" hidden aria-busy="true">
+          <div class="skeleton-shimmer" aria-hidden="true">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-paragraph"></div>
+            <div class="skeleton skeleton-grid"></div>
+            <div class="skeleton skeleton-table"></div>
+          </div>
+          <p class="loading-label">Calculating PM2.5 exposure reductions and synthesizing clean air plan...</p>
         </div>
 
-        <!-- Plan Results Container -->
+        <!-- Populated Plan Results -->
         <div id="plan-results" class="plan-results" hidden>
-          <!-- Plan Executive Summary -->
-          <div class="plan-banner" id="plan-summary-container">
-            <h3 class="plan-summary-title">Executive Summary</h3>
+          <!-- Summary Card -->
+          <div class="plan-summary-card">
+            <div class="summary-header">
+              <span class="summary-tag">Executive Summary</span>
+              <span id="plan-ai-badge-row" class="ai-badge-pill">Deterministic Plan</span>
+            </div>
             <p id="plan-summary-text" class="plan-summary-text"></p>
-            <div id="plan-ai-badge-row" class="ai-badge-row"></div>
-          </div>
-
-          <!-- Contextual Warnings Accordion/Box -->
-          <div id="warnings-container" class="warnings-container" role="region" aria-label="Contextual Planning Advisories" hidden>
-            <h3 class="warnings-title">Important Planning Advisories</h3>
-            <div id="warnings-list" class="warnings-list"></div>
-          </div>
-
-          <!-- Section 1: Exact Budget Breakdown -->
-          <div class="result-block" id="budget-block">
-            <div class="result-block-header">
-              <h3 class="result-block-title">
-                <span class="block-number" aria-hidden="true">1</span> Exact Budget Allocation (Sum: <span id="budget-total-display">₹0</span>)
-              </h3>
-              <span class="badge badge-success" id="budget-sum-status">100% Balanced</span>
-            </div>
-            <p class="result-block-desc">
-              Every rupee is strictly accounted for without rounding leakage, adjusted for your event type and venue configuration.
-            </p>
-
-            <!-- Accessible Data Table -->
-            <div class="table-responsive">
-              <table class="data-table" id="budget-table">
-                <caption class="sr-only">Detailed breakdown of event budget categories, percentage allocations, and exact amounts in INR</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Budget Category</th>
-                    <th scope="col" class="text-right">Share (%)</th>
-                    <th scope="col" class="text-right">Amount (₹ INR)</th>
-                  </tr>
-                </thead>
-                <tbody id="budget-table-body"></tbody>
-                <tfoot>
-                  <tr class="table-total-row">
-                    <th scope="row">Total Budget</th>
-                    <td class="text-right" id="budget-total-percent">100%</td>
-                    <td class="text-right" id="budget-total-amount">₹0</td>
-                  </tr>
-                </tfoot>
-              </table>
+            <div class="plan-meta-footer">
+              <span id="plan-city-aqi" class="meta-tag"></span>
+              <span id="plan-timestamp" class="meta-timestamp"></span>
             </div>
           </div>
 
-          <!-- Section 2: Milestone Timeline with Compression -->
-          <div class="result-block" id="timeline-block">
-            <div class="result-block-header">
-              <h3 class="result-block-title">
-                <span class="block-number" aria-hidden="true">2</span> Backward Planning Timeline
-              </h3>
-              <span class="badge" id="timeline-mode-badge">Standard Schedule</span>
+          <!-- Direct Impact Metrics Grid -->
+          <div class="section-block">
+            <h3 class="section-title">📊 Direct Health & Environmental Impact</h3>
+            <p class="section-subtitle">Scientifically calculated exposure reductions based on CPCB and Berkeley Earth benchmarks.</p>
+            
+            <div class="impact-grid">
+              <!-- Metric 1: PM2.5 Reduction -->
+              <div class="impact-card">
+                <span class="impact-icon" aria-hidden="true">🫁</span>
+                <span class="impact-label">PM2.5 Exposure Cut</span>
+                <div class="impact-value text-success" id="impact-reduction-pct">-0%</div>
+                <span class="impact-detail" id="impact-pm25-detail">From 0 to 0 µg/m³</span>
+              </div>
+
+              <!-- Metric 2: Berkeley Earth Cigarettes Avoided -->
+              <div class="impact-card">
+                <span class="impact-icon" aria-hidden="true">🚬</span>
+                <span class="impact-label">Cigarettes Avoided</span>
+                <div class="impact-value text-accent" id="impact-cigs-saved">0</div>
+                <span class="impact-detail" id="impact-cigs-detail">Per person/day (Berkeley Earth formula)</span>
+              </div>
+
+              <!-- Metric 3: Carbon & Particulate Saved -->
+              <div class="impact-card">
+                <span class="impact-icon" aria-hidden="true">🌱</span>
+                <span class="impact-label">Emissions Averted</span>
+                <div class="impact-value text-primary" id="impact-co2-saved">0 kg</div>
+                <span class="impact-detail" id="impact-pm-detail">Monthly CO2 & localized PM10</span>
+              </div>
+
+              <!-- Metric 4: Financial Savings -->
+              <div class="impact-card">
+                <span class="impact-icon" aria-hidden="true">💰</span>
+                <span class="impact-label">Direct Financial Savings</span>
+                <div class="impact-value text-success" id="impact-savings-inr">₹0</div>
+                <span class="impact-detail" id="impact-savings-detail">DIY purifier vs commercial unit</span>
+              </div>
             </div>
-            <p class="result-block-desc" id="timeline-desc">
-              Milestones sequenced backward from your event date.
-            </p>
-            <div class="timeline-container" id="timeline-list" role="list"></div>
           </div>
 
-          <!-- Section 3: Interactive Vendor Checklist -->
-          <div class="result-block" id="vendor-block">
-            <div class="result-block-header">
+          <!-- Contextual Warnings Section -->
+          <div id="warnings-container" class="section-block" hidden>
+            <h3 class="section-title text-danger">⚠️ Health Advisories & Vulnerability Alerts</h3>
+            <ul id="warnings-list" class="warnings-list" role="list"></ul>
+          </div>
+
+          <!-- Diurnal Hourly Smog Routine Timeline -->
+          <div class="section-block">
+            <div class="section-header-row">
               <div>
-                <h3 class="result-block-title">
-                  <span class="block-number" aria-hidden="true">3</span> Vendor Checklist & Budget Allocation
-                </h3>
-                <p class="result-block-desc">
-                  Tick vendors as you confirm them. Your progress and booked vendor budget updates in real-time.
-                </p>
+                <h3 class="section-title">⏰ Diurnal Low-Emission Daily Routine</h3>
+                <p class="section-subtitle">Structured around thermal inversion cycles: avoiding smog peaks and leveraging clearing windows.</p>
+              </div>
+            </div>
+            <div id="diurnal-routine-list" class="diurnal-routine-list" role="list"></div>
+          </div>
+
+          <!-- Room-by-Room IAQ Hacks Interactive Checklist -->
+          <div class="section-block">
+            <div class="section-header-row">
+              <div>
+                <h3 class="section-title">🏡 Indoor Air Quality (IAQ) Hacks & DIY Blueprints</h3>
+                <p class="section-subtitle">Low-cost, high-impact domestic interventions. Mark completed hacks to track progress.</p>
               </div>
               <div class="vendor-progress-box">
-                <span class="vendor-progress-text" id="vendor-progress-label">0 of 0 Booked</span>
-                <div class="progress-bar-track" role="progressbar" id="vendor-progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Vendor confirmation progress">
-                  <div class="progress-bar-fill" id="vendor-progress-fill" style="width: 0%;"></div>
+                <span id="hacks-progress-label" class="progress-label">0 of 0 Completed</span>
+                <div id="hacks-progressbar" class="progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <div id="hacks-progress-fill" class="progress-bar-fill" style="width: 0%"></div>
                 </div>
               </div>
             </div>
-            <div class="vendor-list" id="vendor-checklist" role="group" aria-label="Vendor Booking Checklist"></div>
+            <div id="iaq-hacks-container" class="iaq-hacks-container"></div>
           </div>
 
-          <!-- Section 4: Personalized Ideas -->
-          <div class="result-block" id="ideas-block">
-            <div class="result-block-header">
-              <h3 class="result-block-title">
-                <span class="block-number" aria-hidden="true">4</span> Bespoke Cultural & Culinary Concepts
-              </h3>
-            </div>
-            <p class="result-block-desc">
-              Curated for your city, dietary choices, venue setting, and custom themes.
-            </p>
-            <div class="ideas-grid" id="ideas-list"></div>
+          <!-- Sustainable Alternatives Section -->
+          <div class="section-block">
+            <h3 class="section-title">🚲 Sustainable Alternatives & Lifestyle Transitions</h3>
+            <p class="section-subtitle">Practical substitutions that systematically lower your household and community footprint.</p>
+            <div id="sustainable-alternatives-grid" class="alternatives-grid"></div>
+          </div>
+
+          <!-- Community Action Blueprint (RWAs / Societies) -->
+          <div id="community-blueprint-block" class="section-block community-blueprint-block">
+            <h3 class="section-title">🏘️ Community & Society Clean Air Blueprint</h3>
+            <p class="section-subtitle" id="community-blueprint-subtitle">Collective initiatives for residential welfare associations, apartment towers, and schools.</p>
+            <div id="community-initiatives-list" class="community-initiatives-list"></div>
+          </div>
+
+          <!-- AI Bespoke Recommendations Section -->
+          <div class="section-block">
+            <h3 class="section-title">💡 Bespoke Hyper-Local Recommendations</h3>
+            <p class="section-subtitle">Creative adaptations matching your specific constraints and micro-climate.</p>
+            <ul id="ai-ideas-list" class="ideas-list" role="list"></ul>
           </div>
         </div>
       </section>
@@ -358,10 +468,11 @@
   <footer class="app-footer" role="contentinfo">
     <div class="footer-container">
       <p class="footer-text">
-        <strong>Utsav Planner</strong> — Engineered for Indian Families & Communities. Zero-dependency architecture.
+        <strong>Prana Urban Air Quality Assistant</strong> &bull; Zero external runtime dependencies &bull; 
+        Built with native Node.js standard modules &bull; Grounded in CPCB, US EPA, and Berkeley Earth scientific standards.
       </p>
-      <p class="footer-subtext">
-        Adheres to WCAG 2.1 AA accessibility guidelines, strict CSP security, and deterministic offline resilience.
+      <p class="footer-disclaimer">
+        Disclaimer: This assistant provides environmental lifestyle guidance and exposure mitigation hacks. It does not replace medical advice for acute respiratory conditions.
       </p>
     </div>
   </footer>

@@ -1,167 +1,147 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { sanitizeString, validateAssessmentInput } from '../src/validate.js';
 import {
-  validatePlanningInput,
-  sanitizeString,
-  isValidDateFormat,
-  isFutureOrToday
-} from '../src/validate.js';
+  USER_TYPES,
+  AREA_TYPES,
+  HOUSING_TYPES,
+  COMMUTE_MODES,
+  COOKING_HEATING,
+  VULNERABLE_GROUPS,
+  BUDGET_PREFERENCES
+} from '../src/constants.js';
 
 describe('Validation Module - sanitizeString', () => {
   it('strips ASCII control characters and retains valid text', () => {
-    const raw = 'Royal\x00 Wedding\x07 with\x1B bells\nand sweets!';
-    const cleaned = sanitizeString(raw);
-    assert.equal(cleaned, 'Royal Wedding with bells\nand sweets!');
+    const raw = 'Delhi\x00\x08\x1F NCR Smog Safe';
+    assert.equal(sanitizeString(raw), 'Delhi NCR Smog Safe');
   });
 
   it('handles empty or non-string input safely', () => {
     assert.equal(sanitizeString(null), '');
     assert.equal(sanitizeString(undefined), '');
     assert.equal(sanitizeString(12345), '');
+    assert.equal(sanitizeString({}), '');
+  });
+
+  it('preserves clean unicode characters and emojis', () => {
+    const text = 'Pure Air 🍃 🫁 New Delhi';
+    assert.equal(sanitizeString(text), text);
   });
 });
 
-describe('Validation Module - isValidDateFormat', () => {
-  it('accepts valid YYYY-MM-DD dates', () => {
-    assert.equal(isValidDateFormat('2026-12-25'), true);
-    assert.equal(isValidDateFormat('2027-01-01'), true);
-  });
-
-  it('rejects invalid date formats', () => {
-    assert.equal(isValidDateFormat('25-12-2026'), false);
-    assert.equal(isValidDateFormat('2026/12/25'), false);
-    assert.equal(isValidDateFormat('invalid-date'), false);
-    assert.equal(isValidDateFormat(''), false);
-    assert.equal(isValidDateFormat(null), false);
-    // Non-existent calendar date
-    assert.equal(isValidDateFormat('2026-02-30'), false);
-  });
-});
-
-describe('Validation Module - isFutureOrToday', () => {
-  const refDate = new Date(2026, 9, 23); // Oct 23, 2026
-
-  it('accepts today or future dates', () => {
-    assert.equal(isFutureOrToday('2026-10-23', refDate), true);
-    assert.equal(isFutureOrToday('2026-10-24', refDate), true);
-    assert.equal(isFutureOrToday('2027-01-01', refDate), true);
-  });
-
-  it('rejects past dates', () => {
-    assert.equal(isFutureOrToday('2026-10-22', refDate), false);
-    assert.equal(isFutureOrToday('2025-05-15', refDate), false);
-  });
-});
-
-describe('Validation Module - validatePlanningInput', () => {
-  const refDate = new Date(2026, 9, 23);
-
+describe('Validation Module - validateAssessmentInput', () => {
   const validPayload = {
-    eventType: 'wedding',
-    guestCount: 200,
-    totalBudget: 1500000,
-    eventDate: '2026-12-15',
-    city: 'Jaipur',
-    venueType: 'outdoor',
-    diet: 'mixed',
-    preferences: 'Grand Rajasthani royal setup with fireworks'
+    userType: USER_TYPES.FAMILY,
+    city: 'Delhi NCR',
+    areaType: AREA_TYPES.URBAN_CORE,
+    aqiLevel: 420,
+    householdSize: 4,
+    housingType: HOUSING_TYPES.APARTMENT_HIGH_FLOOR,
+    primaryCommute: COMMUTE_MODES.TWO_WHEELER,
+    cookingHeating: COOKING_HEATING.LPG_GAS,
+    vulnerableMembers: [
+      VULNERABLE_GROUPS.INFANTS_CHILDREN,
+      VULNERABLE_GROUPS.ASTHMATIC_RESPIRATORY
+    ],
+    budgetPreference: BUDGET_PREFERENCES.LOW_COST_DIY,
+    notes: 'Need low cost DIY Corsi-Rosenthal filter advice for asthmatic 6yo child.'
   };
 
   it('accepts a fully valid payload', () => {
-    const res = validatePlanningInput(validPayload, refDate);
-    assert.equal(res.valid, true);
-    assert.equal(res.errors.length, 0);
-    assert.equal(res.sanitized.totalBudget, 1500000);
-    assert.equal(res.sanitized.city, 'Jaipur');
-  });
-
-  it('rejects past dates', () => {
-    const badPayload = { ...validPayload, eventDate: '2025-01-01' };
-    const res = validatePlanningInput(badPayload, refDate);
-    assert.equal(res.valid, false);
-    assert.ok(res.errors.some((e) => e.includes('past')));
-  });
-
-  it('rejects negative or absurdly low budgets', () => {
-    const badPayload = { ...validPayload, totalBudget: -5000 };
-    const res = validatePlanningInput(badPayload, refDate);
-    assert.equal(res.valid, false);
-    assert.ok(res.errors.some((e) => e.includes('totalBudget')));
-  });
-
-  it('rejects non-integer or excessive guest counts', () => {
-    const floatGuests = { ...validPayload, guestCount: 150.5 };
-    assert.equal(validatePlanningInput(floatGuests, refDate).valid, false);
-
-    const hugeGuests = { ...validPayload, guestCount: 25000 };
-    const res = validatePlanningInput(hugeGuests, refDate);
-    assert.equal(res.valid, false);
-    assert.ok(res.errors.some((e) => e.includes('guestCount')));
-
-    const tinyGuests = { ...validPayload, guestCount: 2 };
-    assert.equal(validatePlanningInput(tinyGuests, refDate).valid, false);
-  });
-
-  it('rejects invalid enum values', () => {
-    const badEventType = { ...validPayload, eventType: 'carnival' };
-    assert.equal(validatePlanningInput(badEventType, refDate).valid, false);
-
-    const badVenue = { ...validPayload, venueType: 'underwater' };
-    assert.equal(validatePlanningInput(badVenue, refDate).valid, false);
-
-    const badDiet = { ...validPayload, diet: 'carnivore' };
-    assert.equal(validatePlanningInput(badDiet, refDate).valid, false);
-  });
-
-  it('rejects missing or empty city', () => {
-    const emptyCity = { ...validPayload, city: '' };
-    assert.equal(validatePlanningInput(emptyCity, refDate).valid, false);
-
-    const oneCharCity = { ...validPayload, city: 'A' };
-    assert.equal(validatePlanningInput(oneCharCity, refDate).valid, false);
-  });
-
-  it('sanitizes XSS strings and strips control characters', () => {
-    const xssPayload = {
-      ...validPayload,
-      preferences: '<script>alert("pwned")</script>\x00\x08Live Dhol',
-      city: 'Delhi\x07'
-    };
-    const res = validatePlanningInput(xssPayload, refDate);
-    assert.equal(res.valid, true);
-    // Control chars stripped
-    assert.equal(res.sanitized.city, 'Delhi');
-    assert.ok(!res.sanitized.preferences.includes('\x00'));
-    assert.ok(!res.sanitized.preferences.includes('\x08'));
+    const result = validateAssessmentInput(validPayload);
+    assert.equal(result.valid, true);
+    assert.equal(result.errors.length, 0);
+    assert.ok(result.sanitized);
+    assert.equal(result.sanitized.city, 'Delhi NCR');
+    assert.equal(result.sanitized.aqiLevel, 420);
+    assert.equal(result.sanitized.householdSize, 4);
   });
 
   it('rejects non-object or null payloads', () => {
-    assert.equal(validatePlanningInput(null, refDate).valid, false);
-    assert.equal(validatePlanningInput(undefined, refDate).valid, false);
-    assert.equal(validatePlanningInput('string', refDate).valid, false);
-    assert.equal(validatePlanningInput([1, 2, 3], refDate).valid, false);
+    assert.equal(validateAssessmentInput(null).valid, false);
+    assert.equal(validateAssessmentInput('invalid string').valid, false);
+    assert.equal(validateAssessmentInput([]).valid, false);
   });
 
-  it('rejects preferences exceeding 500 characters', () => {
-    const longPrefs = { ...validPayload, preferences: 'A'.repeat(505) };
-    const res = validatePlanningInput(longPrefs, refDate);
+  it('rejects missing or empty city name', () => {
+    const payload = { ...validPayload, city: '   ' };
+    const res = validateAssessmentInput(payload);
     assert.equal(res.valid, false);
-    assert.ok(res.errors.some((e) => e.includes('preferences')));
+    assert.ok(res.errors.some((e) => e.includes('City/Location is required')));
   });
 
-  it('rejects invalid or non-ISO eventDate strings', () => {
-    const invalidDate = { ...validPayload, eventDate: 'not-a-date' };
-    const res = validatePlanningInput(invalidDate, refDate);
+  it('rejects city name exceeding 80 characters', () => {
+    const payload = { ...validPayload, city: 'A'.repeat(85) };
+    const res = validateAssessmentInput(payload);
     assert.equal(res.valid, false);
-    assert.ok(res.errors.some((e) => e.includes('eventDate')));
+    assert.ok(res.errors.some((e) => e.includes('City name exceeds')));
   });
 
-  it('rejects extreme boundary inputs (boolean/infinite budget, excessive guests and city)', () => {
-    assert.equal(validatePlanningInput({ ...validPayload, totalBudget: true }, refDate).valid, false);
-    assert.equal(validatePlanningInput({ ...validPayload, totalBudget: Infinity }, refDate).valid, false);
-    assert.equal(validatePlanningInput({ ...validPayload, totalBudget: 600000000 }, refDate).valid, false);
-    assert.equal(validatePlanningInput({ ...validPayload, guestCount: 15000 }, refDate).valid, false);
-    assert.equal(validatePlanningInput({ ...validPayload, guestCount: 25.5 }, refDate).valid, false);
-    assert.equal(validatePlanningInput({ ...validPayload, city: 'C'.repeat(85) }, refDate).valid, false);
+  it('rejects non-numeric or out-of-bounds AQI levels', () => {
+    assert.equal(validateAssessmentInput({ ...validPayload, aqiLevel: 'high' }).valid, false);
+    assert.equal(validateAssessmentInput({ ...validPayload, aqiLevel: 5 }).valid, false);
+    assert.equal(validateAssessmentInput({ ...validPayload, aqiLevel: 1050 }).valid, false);
+  });
+
+  it('rejects invalid or non-integer household size', () => {
+    assert.equal(validateAssessmentInput({ ...validPayload, householdSize: 0 }).valid, false);
+    assert.equal(validateAssessmentInput({ ...validPayload, householdSize: 2.5 }).valid, false);
+    assert.equal(validateAssessmentInput({ ...validPayload, householdSize: 20000 }).valid, false);
+  });
+
+  it('falls back to safe enum defaults for unrecognized enum values', () => {
+    const payload = {
+      ...validPayload,
+      userType: 'unrecognized_user',
+      areaType: 'unknown_area',
+      housingType: 'tent',
+      primaryCommute: 'helicopter',
+      cookingHeating: 'nuclear_fusion',
+      budgetPreference: 'infinite_budget'
+    };
+    const res = validateAssessmentInput(payload);
+    assert.equal(res.valid, true);
+    assert.equal(res.sanitized.userType, USER_TYPES.FAMILY);
+    assert.equal(res.sanitized.areaType, AREA_TYPES.URBAN_CORE);
+    assert.equal(res.sanitized.housingType, HOUSING_TYPES.APARTMENT_HIGH_FLOOR);
+    assert.equal(res.sanitized.primaryCommute, COMMUTE_MODES.PUBLIC_TRANSIT);
+    assert.equal(res.sanitized.cookingHeating, COOKING_HEATING.LPG_GAS);
+    assert.equal(res.sanitized.budgetPreference, BUDGET_PREFERENCES.LOW_COST_DIY);
+  });
+
+  it('filters out invalid vulnerable group members safely', () => {
+    const payload = {
+      ...validPayload,
+      vulnerableMembers: [
+        VULNERABLE_GROUPS.INFANTS_CHILDREN,
+        'invalid_member_tag',
+        VULNERABLE_GROUPS.ELDERLY
+      ]
+    };
+    const res = validateAssessmentInput(payload);
+    assert.equal(res.valid, true);
+    assert.deepEqual(res.sanitized.vulnerableMembers, [
+      VULNERABLE_GROUPS.INFANTS_CHILDREN,
+      VULNERABLE_GROUPS.ELDERLY
+    ]);
+  });
+
+  it('rejects notes exceeding 500 characters', () => {
+    const payload = { ...validPayload, notes: 'A'.repeat(550) };
+    const res = validateAssessmentInput(payload);
+    assert.equal(res.valid, false);
+    assert.ok(res.errors.some((e) => e.includes('Notes exceed maximum')));
+  });
+
+  it('defends against XSS by sanitizing input fields', () => {
+    const payload = {
+      ...validPayload,
+      city: '<script>alert("xss")</script> Delhi',
+      notes: '<img src=x onerror=alert(1)> Needs air filter.'
+    };
+    const res = validateAssessmentInput(payload);
+    assert.equal(res.valid, true);
+    assert.ok(!res.sanitized.city.includes('\x00'));
   });
 });

@@ -1,429 +1,227 @@
 /**
- * Centralized Named Constants for Utsav Event Planner
- * All values adhere to Indian celebration standards (INR currency, regional customs).
+ * Centralized Constants for Prana - Urban Air Quality Assistant
+ * Standardized against Central Pollution Control Board (CPCB), US EPA, and WHO benchmarks.
  */
 
-export const EVENT_TYPES = Object.freeze({
-  WEDDING: 'wedding',
-  BIRTHDAY: 'birthday',
+export const APP_NAME = 'Prana Urban Air Quality Assistant';
+
+/**
+ * User / Entity Categories
+ */
+export const USER_TYPES = Object.freeze({
+  FAMILY: 'family',
   COMMUNITY: 'community'
 });
 
-export const VENUE_TYPES = Object.freeze({
-  INDOOR: 'indoor',
-  OUTDOOR: 'outdoor'
-});
-
-export const DIET_TYPES = Object.freeze({
-  VEG: 'veg',
-  NON_VEG: 'non-veg',
-  MIXED: 'mixed'
-});
-
 /**
- * Ideal lead time (in calendar days) recommended for Indian events.
- * If lead time is shorter, the planner triggers timeline compression and warnings.
+ * Urban Area Environmental Profiles
  */
-export const IDEAL_LEAD_DAYS = Object.freeze({
-  [EVENT_TYPES.WEDDING]: 180,
-  [EVENT_TYPES.COMMUNITY]: 60,
-  [EVENT_TYPES.BIRTHDAY]: 30
+export const AREA_TYPES = Object.freeze({
+  URBAN_CORE: 'urban_core',
+  INDUSTRIAL_CORRIDOR: 'industrial_corridor',
+  NEAR_HIGHWAY: 'near_highway',
+  RESIDENTIAL_SUBURB: 'residential_suburb',
+  GREEN_ZONE: 'green_zone'
 });
 
 /**
- * Recommended minimum per-guest budget in INR.
- * Events below these thresholds generate contextual financial warnings.
+ * Housing Structural Types
  */
-export const MIN_BUDGET_PER_GUEST_INR = Object.freeze({
-  [EVENT_TYPES.WEDDING]: 1200,
-  [EVENT_TYPES.COMMUNITY]: 250,
-  [EVENT_TYPES.BIRTHDAY]: 400
+export const HOUSING_TYPES = Object.freeze({
+  APARTMENT_HIGH_FLOOR: 'apartment_high_floor', // Floor 5+ (inversion layer exposure)
+  APARTMENT_LOW_FLOOR: 'apartment_low_floor',   // Ground to 4th (street dust & vehicle exhaust)
+  INDEPENDENT_HOUSE: 'independent_house',       // Multiple drafts / courtyards
+  RENTED_BUDGET: 'rented_budget'               // Non-modifiable infrastructure (portable DIY hacks)
 });
 
 /**
- * Input limits to safeguard system stability and defend against abuse.
+ * Daily Commute Modes
+ */
+export const COMMUTE_MODES = Object.freeze({
+  TWO_WHEELER: 'two_wheeler',         // Motorbike / scooter (highest direct exposure)
+  PUBLIC_TRANSIT: 'public_transit',   // Metro / Electric Bus (low emissions, filtered cabin)
+  PERSONAL_CAR: 'personal_car',       // AC cabin filter, high carbon footprint
+  CARPOOL_CAB: 'carpool_cab',         // Shared vehicle
+  ACTIVE_WALK_CYCLE: 'active_walk_cycle', // High respiration rate in ambient smog
+  WORK_FROM_HOME: 'work_from_home'    // Shielded indoor stay
+});
+
+/**
+ * Cooking & Heating Setups
+ */
+export const COOKING_HEATING = Object.freeze({
+  INDUCTION_ELECTRIC: 'induction_electric', // Zero indoor combustion
+  LPG_GAS: 'lpg_gas',                       // Clean combustion, requires kitchen exhaust
+  BIOMASS_WOOD: 'biomass_wood',             // Extreme particulate & VOC hazard
+  ELECTRIC_HEATER: 'electric_heater',       // Clean indoor warmth
+  UNVENTED_SIGRI: 'unvented_sigri'          // Coal/wood brazier (severe CO & PM2.5 risk)
+});
+
+/**
+ * Vulnerable Demographic Enums
+ */
+export const VULNERABLE_GROUPS = Object.freeze({
+  INFANTS_CHILDREN: 'infants_children',
+  ELDERLY: 'elderly',
+  ASTHMATIC_RESPIRATORY: 'asthmatic_respiratory',
+  PREGNANT: 'pregnant',
+  OUTDOOR_COMMUTERS: 'outdoor_commuters',
+  PETS: 'pets'
+});
+
+/**
+ * Budget Approaches for IAQ Interventions
+ */
+export const BUDGET_PREFERENCES = Object.freeze({
+  LOW_COST_DIY: 'low_cost_diy',       // DIY Corsi-Rosenthal box, draft stoppers, wet mopping
+  BALANCED: 'balanced',               // HEPA air purifiers + DIY room sealing
+  PREMIUM_AUTOMATED: 'premium_automated' // Smart automated purifiers, IAQ monitors, ERV/HRV systems
+});
+
+/**
+ * AQI Breakpoints and Severity Bands (CPCB / WHO Standards)
+ */
+export const AQI_BANDS = Object.freeze({
+  GOOD: { min: 0, max: 50, label: 'Good', pm25Baseline: 25, color: '#16A34A' },
+  SATISFACTORY: { min: 51, max: 100, label: 'Satisfactory', pm25Baseline: 45, color: '#65A30D' },
+  MODERATE: { min: 101, max: 200, label: 'Moderate', pm25Baseline: 80, color: '#D97706' },
+  POOR: { min: 201, max: 300, label: 'Poor', pm25Baseline: 125, color: '#EA580C' },
+  VERY_POOR: { min: 301, max: 400, label: 'Very Poor', pm25Baseline: 210, color: '#DC2626' },
+  SEVERE: { min: 401, max: 999, label: 'Severe / Hazardous', pm25Baseline: 380, color: '#7F1D1D' }
+});
+
+/**
+ * Quantitative Impact Factors & Mathematical Constants
+ */
+export const IMPACT_FACTORS = Object.freeze({
+  // Berkeley Earth formula: 1 cigarette/day ≈ 22 µg/m³ of PM2.5 inhaled over 24 hours
+  BERKELEY_EARTH_PM25_PER_CIGARETTE: 22.0,
+
+  // Average human daily respiration volume in m³
+  DAILY_INHALATION_VOLUME_M3: 15.0,
+
+  // Infiltration factors (proportion of ambient PM2.5 entering indoors)
+  UNSEALED_INFILTRATION: 0.70,
+  WEATHER_SEALED_INFILTRATION: 0.35,
+
+  // Filtration efficiency factors
+  DIY_CORSI_ROSENTHAL_EFFICIENCY: 0.80, // 80% indoor PM2.5 reduction
+  COMMERCIAL_HEPA_EFFICIENCY: 0.85,    // 85% indoor PM2.5 reduction
+  WET_MOP_RESUSPENSION_REDUCTION: 0.40, // 40% reduction in resuspended PM10
+  KITCHEN_EXHAUST_REDUCTION: 0.75,      // 75% reduction in cooking emissions
+  N95_MASK_COMMUTE_EFFICIENCY: 0.85,    // 85% filtration of inhaled ambient PM2.5
+
+  // Emission offsets (kg CO2 per passenger-km)
+  CAR_CO2_PER_KM: 0.170,
+  TWO_WHEELER_CO2_PER_KM: 0.050,
+  METRO_CO2_PER_KM: 0.015,
+  AVERAGE_DAILY_COMMUTE_KM: 20,
+
+  // Financial benchmarks in INR
+  DIY_CORSI_ROSENTHAL_COST_INR: 2200,
+  COMMERCIAL_PURIFIER_COST_INR: 16000,
+  ANNUAL_NEBULIZER_SAVINGS_INR: 4500
+});
+
+/**
+ * Input Limits for Validation and Abuse Prevention
  */
 export const INPUT_LIMITS = Object.freeze({
-  MIN_GUEST_COUNT: 5,
-  MAX_GUEST_COUNT: 10000,
-  MIN_BUDGET_INR: 2000,
-  MAX_BUDGET_INR: 500000000, // 50 Crores INR
-  MAX_PREFERENCES_LENGTH: 500,
+  MIN_HOUSEHOLD_SIZE: 1,
+  MAX_HOUSEHOLD_SIZE: 10000,
+  MIN_AQI: 10,
+  MAX_AQI: 999,
   MAX_CITY_LENGTH: 80,
+  MAX_NOTES_LENGTH: 500,
   MAX_BODY_BYTES: 65536 // 64 KB
 });
 
 /**
- * Percentage allocations by event type and venue configuration.
- * Percentages must sum to 100.
+ * Curated City Presets for Quick Demo
  */
-export const BUDGET_ALLOCATIONS = Object.freeze({
-  [EVENT_TYPES.WEDDING]: {
-    [VENUE_TYPES.INDOOR]: [
-      { id: 'catering', name: 'Catering & Shaadi Feast', percent: 32 },
-      { id: 'venue', name: 'Venue & Banquet Hospitality', percent: 22 },
-      { id: 'decor', name: 'Decor, Floral Mandap & Lighting', percent: 16 },
-      { id: 'photography', name: 'Photography & Cinematography', percent: 12 },
-      { id: 'attire_styling', name: 'Bridal/Groom Attire & Mehendi', percent: 8 },
-      { id: 'entertainment', name: 'DJ, Sangeet & Sound Setup', percent: 6 },
-      { id: 'contingency', name: 'Contingency, Sweets & Logistics', percent: 4 }
-    ],
-    [VENUE_TYPES.OUTDOOR]: [
-      { id: 'catering', name: 'Catering & Live Food Counters', percent: 30 },
-      { id: 'decor_tentage', name: 'Waterproof Tentage, Mandap & Decor', percent: 20 },
-      { id: 'venue', name: 'Lawn/Ground Venue Rental', percent: 18 },
-      { id: 'photography', name: 'Photography & Drone Coverage', percent: 12 },
-      { id: 'attire_styling', name: 'Bridal/Groom Attire & Mehendi', percent: 8 },
-      { id: 'genset_backup', name: 'Genset, Power & Weather Backup', percent: 6 },
-      { id: 'entertainment', name: 'DJ, Dhol & Sangeet Sound', percent: 6 }
-    ]
+export const SAMPLE_PRESETS = Object.freeze([
+  {
+    id: 'preset-delhi-family',
+    title: 'Delhi NCR Severe Smog Family',
+    description: 'High-floor apartment with asthmatic child & elderly grandparent in severe winter smog (AQI 420).',
+    data: {
+      userType: USER_TYPES.FAMILY,
+      city: 'Delhi NCR',
+      areaType: AREA_TYPES.URBAN_CORE,
+      aqiLevel: 420,
+      householdSize: 4,
+      housingType: HOUSING_TYPES.APARTMENT_HIGH_FLOOR,
+      primaryCommute: COMMUTE_MODES.TWO_WHEELER,
+      cookingHeating: COOKING_HEATING.LPG_GAS,
+      vulnerableMembers: [
+        VULNERABLE_GROUPS.INFANTS_CHILDREN,
+        VULNERABLE_GROUPS.ELDERLY,
+        VULNERABLE_GROUPS.ASTHMATIC_RESPIRATORY
+      ],
+      budgetPreference: BUDGET_PREFERENCES.LOW_COST_DIY,
+      notes: 'Need low-cost DIY air purifier hacks under ₹2,500. Asthmatic 7yo child has morning school bus commute.'
+    }
   },
-  [EVENT_TYPES.BIRTHDAY]: {
-    [VENUE_TYPES.INDOOR]: [
-      { id: 'catering', name: 'Food, Snacks & Mocktail Bar', percent: 35 },
-      { id: 'venue', name: 'Party Hall / Banquet Rental', percent: 20 },
-      { id: 'decor', name: 'Theme Balloon Styling & Backdrop', percent: 15 },
-      { id: 'entertainment', name: 'Games Host, Magician & Sound', percent: 12 },
-      { id: 'cake', name: 'Custom Designer Cake & Desserts', percent: 10 },
-      { id: 'favours', name: 'Curated Return Gifts / Favours', percent: 8 }
-    ],
-    [VENUE_TYPES.OUTDOOR]: [
-      { id: 'catering', name: 'Live Food Carts & Snacks', percent: 32 },
-      { id: 'venue', name: 'Lawn / Open Terrace Space', percent: 22 },
-      { id: 'entertainment', name: 'Inflatable Play, Games Host & Music', percent: 14 },
-      { id: 'decor', name: 'Canopy Styling, Lights & Photo Booth', percent: 14 },
-      { id: 'cake', name: 'Custom Designer Cake & Pastries', percent: 10 },
-      { id: 'favours', name: 'Curated Return Gifts & Sweets', percent: 8 }
-    ]
+  {
+    id: 'preset-mumbai-commuter',
+    title: 'Mumbai Two-Wheeler Commuter',
+    description: 'Daily 25km motorbike commuter living near highway seeking personal exposure defense.',
+    data: {
+      userType: USER_TYPES.FAMILY,
+      city: 'Mumbai',
+      areaType: AREA_TYPES.NEAR_HIGHWAY,
+      aqiLevel: 240,
+      householdSize: 2,
+      housingType: HOUSING_TYPES.RENTED_BUDGET,
+      primaryCommute: COMMUTE_MODES.TWO_WHEELER,
+      cookingHeating: COOKING_HEATING.INDUCTION_ELECTRIC,
+      vulnerableMembers: [
+        VULNERABLE_GROUPS.OUTDOOR_COMMUTERS
+      ],
+      budgetPreference: BUDGET_PREFERENCES.LOW_COST_DIY,
+      notes: 'Daily 25km motorcycle commute in heavy traffic. Rented flat so cannot make structural alterations.'
+    }
   },
-  [EVENT_TYPES.COMMUNITY]: {
-    [VENUE_TYPES.INDOOR]: [
-      { id: 'catering', name: 'Community Feast / Mahaprasad / Buffet', percent: 38 },
-      { id: 'venue', name: 'Community Hall / Auditorium Rental', percent: 22 },
-      { id: 'av_sound', name: 'PA System, Stage & Microphones', percent: 18 },
-      { id: 'decor', name: 'Stage Floral Decor, Banners & Seating', percent: 10 },
-      { id: 'permits_security', name: 'Civic Permissions, Security & Helpers', percent: 6 },
-      { id: 'waste_contingency', name: 'Eco Sanitation & Contingency Reserve', percent: 6 }
-    ],
-    [VENUE_TYPES.OUTDOOR]: [
-      { id: 'catering', name: 'Community Feast / Langar Service', percent: 35 },
-      { id: 'venue_shamiana', name: 'Ground Rental & Pandal / Shamiana', percent: 24 },
-      { id: 'av_power', name: 'High-Wattage PA, Stage, Lights & Genset', percent: 20 },
-      { id: 'decor', name: 'Pandal Entrance Decor & Wayfinding Signage', percent: 9 },
-      { id: 'permits_security', name: 'Police NOC, Fire Safety & Crowd Control', percent: 6 },
-      { id: 'waste_contingency', name: 'Eco Waste Management & Weather Buffer', percent: 6 }
-    ]
+  {
+    id: 'preset-rwa-community',
+    title: 'Noida / Gurugram Society RWA',
+    description: '180-flat residential welfare association looking for community-wide anti-smog gate policies.',
+    data: {
+      userType: USER_TYPES.COMMUNITY,
+      city: 'Gurugram / Noida',
+      areaType: AREA_TYPES.RESIDENTIAL_SUBURB,
+      aqiLevel: 460,
+      householdSize: 650,
+      housingType: HOUSING_TYPES.APARTMENT_HIGH_FLOOR,
+      primaryCommute: COMMUTE_MODES.PERSONAL_CAR,
+      cookingHeating: COOKING_HEATING.LPG_GAS,
+      vulnerableMembers: [
+        VULNERABLE_GROUPS.ELDERLY,
+        VULNERABLE_GROUPS.INFANTS_CHILDREN,
+        VULNERABLE_GROUPS.OUTDOOR_COMMUTERS
+      ],
+      budgetPreference: BUDGET_PREFERENCES.BALANCED,
+      notes: 'RWA committee looking to implement society gate anti-idling, guard warmth without burning trash, and community clean-air shelter.'
+    }
+  },
+  {
+    id: 'preset-bengaluru-eco',
+    title: 'Bengaluru Suburban Eco Home',
+    description: 'Eco-conscious family looking for sustainable commute and indoor botanical filtration.',
+    data: {
+      userType: USER_TYPES.FAMILY,
+      city: 'Bengaluru',
+      areaType: AREA_TYPES.RESIDENTIAL_SUBURB,
+      aqiLevel: 135,
+      householdSize: 3,
+      housingType: HOUSING_TYPES.INDEPENDENT_HOUSE,
+      primaryCommute: COMMUTE_MODES.PUBLIC_TRANSIT,
+      cookingHeating: COOKING_HEATING.INDUCTION_ELECTRIC,
+      vulnerableMembers: [
+        VULNERABLE_GROUPS.PETS
+      ],
+      budgetPreference: BUDGET_PREFERENCES.BALANCED,
+      notes: 'Family with two rescue dogs. Want natural air-purifying plant routines, composting, and zero-emission heating.'
+    }
   }
-});
-
-/**
- * Standard milestone blueprints with relative target percentages of total lead time.
- * When short notice occurs, these percentages gracefully compress within the available days.
- */
-export const MILESTONE_TEMPLATES = Object.freeze({
-  [EVENT_TYPES.WEDDING]: [
-    {
-      id: 'wm-1',
-      title: 'Fix Auspicious Muhurat & Book Venue',
-      relOffsetPercent: 1.0, // 100% of lead time before event
-      phase: 'Foundation',
-      description: 'Consult family priest/astrologer for muhurat; secure central banquet or resort with advance token.'
-    },
-    {
-      id: 'wm-2',
-      title: 'Shortlist Caterer & Food Tasting Session',
-      relOffsetPercent: 0.8,
-      phase: 'Catering',
-      description: 'Finalize menu items (chaat, main regional thali, dessert counter) and verify service crockery staff.'
-    },
-    {
-      id: 'wm-3',
-      title: 'Book Photographer & Mandap Decorator',
-      relOffsetPercent: 0.65,
-      phase: 'Vendors',
-      description: 'Review portfolio for candid coverage, drone permissions, and traditional floral mandap concepts.'
-    },
-    {
-      id: 'wm-4',
-      title: 'Select Wedding Attire & Bridal Mehendi Artist',
-      relOffsetPercent: 0.5,
-      phase: 'Attire & Styling',
-      description: 'Schedule fittings for sherwani/lehenga and book henna artist for sangeet evening.'
-    },
-    {
-      id: 'wm-5',
-      title: 'Dispatch Digital & Print Invitations (Lagan Patrika)',
-      relOffsetPercent: 0.35,
-      phase: 'Invitations',
-      description: 'Send RSVP links and gift boxes to outstation relatives; arrange hotel room blocks.'
-    },
-    {
-      id: 'wm-6',
-      title: 'Sangeet Choreography & DJ Music Playlist Finalization',
-      relOffsetPercent: 0.2,
-      phase: 'Rehearsals',
-      description: 'Coordinate family dance routines and submit specific song list to DJ/Dhol performers.'
-    },
-    {
-      id: 'wm-7',
-      title: 'Final Headcount & Vendor Coordination Walkthrough',
-      relOffsetPercent: 0.08,
-      phase: 'Countdown',
-      description: 'Freeze guest count with caterer, confirm transit timings for baraat and pooja samagri list.'
-    },
-    {
-      id: 'wm-8',
-      title: 'Event Day Celebrations & Auspicious Rituals',
-      relOffsetPercent: 0.0,
-      phase: 'Event Day',
-      description: 'Ceremonial welcome, saat phere / vows, family banquet, and bidaai.'
-    }
-  ],
-  [EVENT_TYPES.BIRTHDAY]: [
-    {
-      id: 'bm-1',
-      title: 'Select Party Theme & Lock Venue',
-      relOffsetPercent: 1.0,
-      phase: 'Foundation',
-      description: 'Decide on child/adult theme (e.g., Jungle Safari, Bollywood Retro, Superhero) and secure space.'
-    },
-    {
-      id: 'bm-2',
-      title: 'Order Custom Theme Cake & Plan Snacks Menu',
-      relOffsetPercent: 0.7,
-      phase: 'Bakery & Food',
-      description: 'Select tier flavours, eggless/dietary choices, and fingerprint-friendly finger food for kids.'
-    },
-    {
-      id: 'bm-3',
-      title: 'Book Entertainer / Magician & Music Host',
-      relOffsetPercent: 0.5,
-      phase: 'Entertainment',
-      description: 'Hire magic performer, balloon sculptor, face painter, or karaoke host to engage guests.'
-    },
-    {
-      id: 'bm-4',
-      title: 'Send Digital WhatsApp Invites & Collect RSVPs',
-      relOffsetPercent: 0.35,
-      phase: 'Invitations',
-      description: 'Share location pin, dress code theme, and dietary preference options.'
-    },
-    {
-      id: 'bm-5',
-      title: 'Assemble Return Favours & DIY Activity Packs',
-      relOffsetPercent: 0.15,
-      phase: 'Favours',
-      description: 'Pack themed goodies, sweets, and personalised stationery bags for young attendees.'
-    },
-    {
-      id: 'bm-6',
-      title: 'Celebration Day, Cake Cutting & Party Games',
-      relOffsetPercent: 0.0,
-      phase: 'Event Day',
-      description: 'Welcome guests, kickstart interactive games, cake cutting ritual, and photography.'
-    }
-  ],
-  [EVENT_TYPES.COMMUNITY]: [
-    {
-      id: 'cm-1',
-      title: 'Core Committee Meeting & Budget Sanction',
-      relOffsetPercent: 1.0,
-      phase: 'Governance',
-      description: 'Form sub-committees (cultural, food, stage, reception) and open community contribution register.'
-    },
-    {
-      id: 'cm-2',
-      title: 'Apply for Municipal, Police & Sound Permissions',
-      relOffsetPercent: 0.75,
-      phase: 'Compliance',
-      description: 'Submit NOC applications for loudspeaker usage, park/hall booking, and fire safety equipment.'
-    },
-    {
-      id: 'cm-3',
-      title: 'Contract Shamiana, Stage, Lighting & High-Wattage PA',
-      relOffsetPercent: 0.55,
-      phase: 'Infrastructure',
-      description: 'Inspect ground leveling, water points, power backup generator, and emergency exits.'
-    },
-    {
-      id: 'cm-4',
-      title: 'Finalize Community Feast / Mahaprasad Arrangements',
-      relOffsetPercent: 0.35,
-      phase: 'Prasad & Food',
-      description: 'Organize raw ingredients bulk purchase, volunteer seva roster, and eco-friendly leaf plates.'
-    },
-    {
-      id: 'cm-5',
-      title: 'Distribute Public Circulars & Digital Society Notice',
-      relOffsetPercent: 0.2,
-      phase: 'Outreach',
-      description: 'Post schedule on resident WhatsApp groups, notice boards, and invite neighborhood dignitaries.'
-    },
-    {
-      id: 'cm-6',
-      title: 'Stage Run-Through, Sound Check & Safety Audit',
-      relOffsetPercent: 0.07,
-      phase: 'Readiness',
-      description: 'Microphone level check, first-aid station setup, and waste segregation bins deployment.'
-    },
-    {
-      id: 'cm-7',
-      title: 'Utsav Inauguration, Cultural Program & Maha Feast',
-      relOffsetPercent: 0.0,
-      phase: 'Event Day',
-      description: 'Lamp lighting, community performances, prasad distribution, and clean-up drive.'
-    }
-  ]
-});
-
-/**
- * Vendor checklist items with priorities and budget fraction relative to category.
- */
-export const VENDOR_TEMPLATES = Object.freeze({
-  [EVENT_TYPES.WEDDING]: [
-    {
-      id: 'v-wed-1',
-      name: 'Banquet Hall or Heritage Lawn Venue',
-      category: 'Venue',
-      priority: 'high',
-      notes: 'Verify AC backup, dressing room keys, and guest valet parking.'
-    },
-    {
-      id: 'v-wed-2',
-      name: 'Halwai / Royal Caterer',
-      category: 'Catering',
-      priority: 'high',
-      notes: 'Ensure distinct live counters, mineral water jars, and adequate serving stewards.'
-    },
-    {
-      id: 'v-wed-3',
-      name: 'Floral Decorator & Traditional Mandap Setup',
-      category: 'Decor',
-      priority: 'high',
-      notes: 'Specify marigold, rajnigandha, jasmine garlands, and stage backdrop lighting.'
-    },
-    {
-      id: 'v-wed-4',
-      name: 'Candid Wedding Photographer & Drone Team',
-      category: 'Photography',
-      priority: 'high',
-      notes: 'Confirm delivery timeline for teaser reel, cinematic highlights, and raw drive.'
-    },
-    {
-      id: 'v-wed-5',
-      name: 'Bridal Henna & Mehendi Artist Group',
-      category: 'Attire & Styling',
-      priority: 'medium',
-      notes: 'Book for bride and 15-20 immediate family members during the sangeet afternoon.'
-    },
-    {
-      id: 'v-wed-6',
-      name: 'Sangeet DJ, Sound Setup & Dhol Players',
-      category: 'Entertainment',
-      priority: 'medium',
-      notes: 'Curate regional folk tracks and popular Bollywood/bhangra wedding anthems.'
-    },
-    {
-      id: 'v-wed-7',
-      name: 'Pooja Samagri & Pandit / Officiant Team',
-      category: 'Rituals',
-      priority: 'high',
-      notes: 'Procure havan samagri, dry fruits, fresh flowers, and ceremonial coconut.'
-    },
-    {
-      id: 'v-wed-8',
-      name: 'Baraat Brass Band & Vintage Car / Chariot',
-      category: 'Logistics',
-      priority: 'low',
-      notes: 'Coordinate arrival point and municipal permissions for procession music.'
-    }
-  ],
-  [EVENT_TYPES.BIRTHDAY]: [
-    {
-      id: 'v-bday-1',
-      name: 'Party Hall / Rooftop Cafe Venue',
-      category: 'Venue',
-      priority: 'high',
-      notes: 'Ensure safe play perimeter and seating arrangement for parents.'
-    },
-    {
-      id: 'v-bday-2',
-      name: 'Custom Theme Cake Baker',
-      category: 'Bakery',
-      priority: 'high',
-      notes: 'Confirm customized fondent/buttercream design, flavour, and safe delivery timing.'
-    },
-    {
-      id: 'v-bday-3',
-      name: 'Kids Snack Caterer & Mocktail Station',
-      category: 'Catering',
-      priority: 'high',
-      notes: 'Arrange mini pizzas, sliders, pasta, mocktails, and fresh juices.'
-    },
-    {
-      id: 'v-bday-4',
-      name: 'Themed Balloon Sculptor & Backdrop Artist',
-      category: 'Decor',
-      priority: 'medium',
-      notes: 'Install balloon arches, character cutouts, and neon age number signs.'
-    },
-    {
-      id: 'v-bday-5',
-      name: 'Party Host / Game Master & Magician',
-      category: 'Entertainment',
-      priority: 'medium',
-      notes: 'Coordinate 45-minute interactive magic session and pass-the-parcel coordination.'
-    },
-    {
-      id: 'v-bday-6',
-      name: 'Curated Return Gift Supplier',
-      category: 'Gifts',
-      priority: 'low',
-      notes: 'Source eco-friendly wooden toys, books, and personalised sweet hampers.'
-    }
-  ],
-  [EVENT_TYPES.COMMUNITY]: [
-    {
-      id: 'v-com-1',
-      name: 'Community Ground / Samaj Bhavan Management',
-      category: 'Venue',
-      priority: 'high',
-      notes: 'Confirm deposit terms, electricity meter check, and cleaning clearance.'
-    },
-    {
-      id: 'v-com-2',
-      name: 'Community Feast / Mahaprasad Kitchen Team',
-      category: 'Catering',
-      priority: 'high',
-      notes: 'Prepare satvik/pure feast with hot serving dispensers and water stations.'
-    },
-    {
-      id: 'v-com-3',
-      name: 'PA Sound Engineer & Stage Lighting Technician',
-      category: 'Sound & Stage',
-      priority: 'high',
-      notes: 'Provide wireless podium mics, feedback filters, and stage monitors.'
-    },
-    {
-      id: 'v-com-4',
-      name: 'Shamiana, Pandal & Seating Chair Supplier',
-      category: 'Infrastructure',
-      priority: 'high',
-      notes: 'Erect waterproof German hanger or traditional fabric shamiana with plastic chairs.'
-    },
-    {
-      id: 'v-com-5',
-      name: 'Emergency Silent Generator (Genset) Vendor',
-      category: 'Power Backup',
-      priority: 'medium',
-      notes: 'Ensure 62.5+ kVA diesel genset with operator for zero interruption.'
-    },
-    {
-      id: 'v-com-6',
-      name: 'Eco Waste Management & Clean-up Crew',
-      category: 'Sanitation',
-      priority: 'medium',
-      notes: 'Install wet/dry segregated dustbins and post-event sweepers.'
-    }
-  ]
-});
+]);

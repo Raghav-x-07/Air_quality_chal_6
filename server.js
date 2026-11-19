@@ -1,5 +1,5 @@
 /**
- * Utsav Event Planner - Production HTTP Server
+ * Prana Urban Air Quality Assistant - Production HTTP Server
  * Zero external runtime dependencies, built using native Node.js 18+ modules.
  * Implements strict security headers, sliding-window rate limiting with memory cleanup,
  * payload capping, safe static serving, and REST endpoints.
@@ -9,9 +9,9 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { INPUT_LIMITS } from './src/constants.js';
-import { validatePlanningInput } from './src/validate.js';
-import { generatePlan } from './src/planner.js';
+import { INPUT_LIMITS, SAMPLE_PRESETS, APP_NAME } from './src/constants.js';
+import { validateAssessmentInput } from './src/validate.js';
+import { generateAssessment } from './src/engine.js';
 import { enrichPlanWithAi } from './src/ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -98,70 +98,58 @@ export class RateLimiter {
   }
 
   /**
-   * Determines if a request from the given IP exceeds the limit.
-   * @param {string} ip - Client IP address
-   * @returns {boolean} True if rate-limited
+   * Determines if a client IP has exceeded the allowed rate threshold.
+   * @param {string} ip
+   * @returns {boolean} True if rate limited, false otherwise.
    */
   isRateLimited(ip) {
+    this.cleanup();
     const now = Date.now();
-    const clientRecord = this.requests.get(ip) || [];
-
     const windowStart = now - this.windowMs;
-    const recentRequests = clientRecord.filter((timestamp) => timestamp > windowStart);
 
-    if (recentRequests.length >= this.maxRequests) {
-      this.requests.set(ip, recentRequests);
+    const timestamps = this.requests.get(ip) || [];
+    const valid = timestamps.filter((t) => t > windowStart);
+
+    if (valid.length >= this.maxRequests) {
       return true;
     }
 
-    recentRequests.push(now);
-    this.requests.set(ip, recentRequests);
-
-    // Opportunistic cleanup when map grows
-    if (this.requests.size > 1000) {
-      this.cleanup();
-    }
-
+    valid.push(now);
+    this.requests.set(ip, valid);
     return false;
-  }
-
-  /**
-   * Clears all stored rate limit records.
-   */
-  reset() {
-    this.requests.clear();
   }
 }
 
 /**
- * Applies security headers to all HTTP responses.
+ * Applies security and defensive HTTP headers to all outgoing responses.
  * @param {http.ServerResponse} res
  */
 export function applySecurityHeaders(res) {
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';"
   );
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'interest-cohort=()');
 }
 
 /**
- * Extracts client IP address safely.
+ * Extracts client IP address safely, respecting X-Forwarded-For if behind a proxy.
  * @param {http.IncomingMessage} req
- * @returns {string}
+ * @returns {string} Client IP
  */
 export function getClientIp(req) {
-  return (
-    req.headers?.['x-forwarded-for']?.split(',')[0].trim() ||
-    req.socket?.remoteAddress ||
-    '127.0.0.1'
-  );
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket?.remoteAddress || '127.0.0.1';
 }
 
 /**
- * Safely reads the incoming request body with strict size capping.
+ * Reads request body stream enforcing maximum byte size limit.
  * @param {http.IncomingMessage} req
  * @param {number} maxBytes
  * @returns {Promise<{ body: string, limitExceeded: boolean }>}
@@ -169,17 +157,15 @@ export function getClientIp(req) {
 export function readRequestBody(req, maxBytes = INPUT_LIMITS.MAX_BODY_BYTES) {
   return new Promise((resolve) => {
     let body = '';
-    let bodySize = 0;
+    let bytesReceived = 0;
     let limitExceeded = false;
 
     req.on('data', (chunk) => {
-      if (limitExceeded) return;
-      bodySize += chunk.length;
-      if (bodySize > maxBytes) {
+      bytesReceived += chunk.length;
+      if (bytesReceived > maxBytes) {
         limitExceeded = true;
-        req.resume(); // Discard remainder without abruptly resetting socket
-        resolve({ body: '', limitExceeded: true });
-        return;
+        req.destroy();
+        return resolve({ body: '', limitExceeded: true });
       }
       body += chunk.toString('utf-8');
     });
@@ -250,18 +236,40 @@ export function handleHealthCheck(req, res) {
   }
 
   res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify({ status: 'healthy', uptime: process.uptime() }));
+  res.end(JSON.stringify({
+    status: 'healthy',
+    app: APP_NAME,
+    uptime: process.uptime()
+  }));
 }
 
 /**
- * Handles the planning API endpoint.
+ * Handles the presets list endpoint.
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse} res
+ */
+export function handlePresetsRequest(req, res) {
+  if (req.method !== 'GET') {
+    res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+  }
+
+  res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({
+    success: true,
+    presets: SAMPLE_PRESETS
+  }));
+}
+
+/**
+ * Handles the air quality assessment API endpoint.
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse} res
  * @param {Object} options
  * @param {RateLimiter} rateLimiter
  * @param {string} clientIp
  */
-export async function handlePlanRequest(req, res, options, rateLimiter, clientIp) {
+export async function handleAssessRequest(req, res, options, rateLimiter, clientIp) {
   if (req.method !== 'POST') {
     res.writeHead(405, {
       Allow: 'POST',
@@ -313,7 +321,7 @@ export async function handlePlanRequest(req, res, options, rateLimiter, clientIp
     }));
   }
 
-  const validation = validatePlanningInput(parsedBody);
+  const validation = validateAssessmentInput(parsedBody);
   if (!validation.valid) {
     res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
     return res.end(JSON.stringify({
@@ -323,25 +331,67 @@ export async function handlePlanRequest(req, res, options, rateLimiter, clientIp
   }
 
   try {
-    const plan = generatePlan(validation.sanitized);
-    const enrichedPlan = await enrichPlanWithAi(
-      plan,
-      process.env.GEMINI_API_KEY,
+    const assessment = generateAssessment(validation.sanitized);
+    const enriched = await enrichPlanWithAi(
+      assessment,
+      process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY,
       options.aiOptions
     );
 
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({
       success: true,
-      data: enrichedPlan
+      data: enriched
     }));
   } catch {
     res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({
       success: false,
-      errors: ['Internal server error while formulating plan.']
+      errors: ['Internal server error while formulating air quality assessment.']
     }));
   }
+}
+
+/**
+ * Dispatches an incoming HTTP request through routing, rate limiting, and security checks.
+ * Can be invoked directly without TCP network sockets for robust in-process testing.
+ *
+ * @param {http.IncomingMessage} req
+ * @param {http.ServerResponse} res
+ * @param {Object} [options]
+ * @param {RateLimiter} [rateLimiter]
+ */
+export async function dispatchRequest(req, res, options = {}, rateLimiter = null) {
+  const limiter = rateLimiter || new RateLimiter(
+    Number(process.env.RATE_LIMIT_WINDOW_MS) || 60000,
+    Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 60
+  );
+
+  const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = url.pathname;
+  const clientIp = getClientIp(req);
+
+  applySecurityHeaders(res);
+
+  if (pathname === '/api/health') {
+    return handleHealthCheck(req, res);
+  }
+
+  if (pathname === '/api/presets') {
+    return handlePresetsRequest(req, res);
+  }
+
+  // Support both /api/assess and legacy alias /api/plan
+  if (pathname === '/api/assess' || pathname === '/api/plan') {
+    return handleAssessRequest(req, res, options, limiter, clientIp);
+  }
+
+  if (req.method === 'GET') {
+    return serveStaticFile(pathname, res);
+  }
+
+  res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({ error: 'Method Not Allowed' }));
 }
 
 /**
@@ -355,27 +405,8 @@ export function createServer(options = {}) {
     Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 60
   );
 
-  return http.createServer(async (req, res) => {
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const pathname = url.pathname;
-    const clientIp = getClientIp(req);
-
-    applySecurityHeaders(res);
-
-    if (pathname === '/api/health') {
-      return handleHealthCheck(req, res);
-    }
-
-    if (pathname === '/api/plan') {
-      return handlePlanRequest(req, res, options, rateLimiter, clientIp);
-    }
-
-    if (req.method === 'GET') {
-      return serveStaticFile(pathname, res);
-    }
-
-    res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+  return http.createServer((req, res) => {
+    dispatchRequest(req, res, options, rateLimiter);
   });
 }
 
@@ -398,7 +429,7 @@ export default function handler(req, res) {
  */
 export function startServer(port = process.env.PORT || 3000) {
   return defaultAppServer.listen(port, () => {
-    console.log(`Utsav Celebration Planner server running at http://localhost:${port}`);
+    console.log(`Prana Urban Air Quality Assistant server running at http://localhost:${port}`);
   });
 }
 
